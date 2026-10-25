@@ -49,3 +49,23 @@ Dans RViz :
 Ce qui calcule le trajet :
 - **NavFn** (Dijkstra) : le chemin le plus court sur la carte.
 - **MPPI** : la conduite (marche arrière, orientation finale).
+
+## Étape 4 — Aller à un point nommé ✔
+
+Paquet `argos_mission` (dans `src/`) :
+- `config/points.yaml` : nom → x, y, theta (relevés avec RViz → **Publish Point**
+  + `ros2 topic echo /clicked_point`)
+- `argos_mission/aller_a.py` : lit le YAML, envoie le goal à Nav2 via
+  `BasicNavigator` (nav2_simple_commander)
+
+Compiler (après chaque `git pull`) :
+```
+cd ~/Documents/Projet/argos_ws
+rosdep install --from-paths src --ignore-src -y
+colcon build --symlink-install
+source install/setup.bash
+```
+Lancer (simulation de l'étape 3 démarrée, 2D Pose Estimate fait) :
+```
+ros2 run argos_mission aller_a alpha
+```
