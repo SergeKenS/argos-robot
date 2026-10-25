@@ -1,0 +1,9 @@
+# Points nommés : chaque nom correspond à une pose sur la carte « arene ».
+#   x, y  : position en mètres, dans le repère de la carte (frame « map »)
+#   theta : orientation du robot à l'arrivée, en radians (0 = vers +x)
+# Relevés avec RViz → Publish Point + « ros2 topic echo /clicked_point ».
+
+points:
+  alpha: {x: 0.56, y: 2.08, theta: 0.0}
+  beta:  {x: 2.56, y: 2.01, theta: 0.0}
+  gamma: {x: 3.37, y: -1.08, theta: 0.0}
