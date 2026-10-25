@@ -17,8 +17,8 @@ setup(
     zip_safe=True,
     maintainer='serge',
     maintainer_email='serge@todo.todo',
-    description='TODO: Package description',
-    license='TODO: License declaration',
+    description='Missions du robot : déplacements vers des points nommés',
+    license='MIT',
     extras_require={
         'test': [
             'pytest',

@@ -5,7 +5,7 @@
   <version>0.0.0</version>
   <description>Missions du robot : déplacements vers des points nommés</description>
   <maintainer email="serge@todo.todo">serge</maintainer>
-  <license>TODO: License declaration</license>
+  <license>MIT</license>
 
   <!-- Dépendances à l'exécution : ce que le code Python importe -->
   <exec_depend>rclpy</exec_depend>
