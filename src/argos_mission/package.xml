@@ -3,9 +3,16 @@
 <package format="3">
   <name>argos_mission</name>
   <version>0.0.0</version>
-  <description>TODO: Package description</description>
+  <description>Missions du robot : déplacements vers des points nommés</description>
   <maintainer email="serge@todo.todo">serge</maintainer>
   <license>TODO: License declaration</license>
+
+  <!-- Dépendances à l'exécution : ce que le code Python importe -->
+  <exec_depend>rclpy</exec_depend>
+  <exec_depend>geometry_msgs</exec_depend>
+  <exec_depend>nav2_simple_commander</exec_depend>
+  <exec_depend>ament_index_python</exec_depend>
+  <exec_depend>python3-yaml</exec_depend>
 
   <test_depend>ament_copyright</test_depend>
   <test_depend>ament_flake8</test_depend>
