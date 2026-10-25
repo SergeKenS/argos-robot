@@ -7,7 +7,7 @@ Modes (un seul actif à la fois) :
 Plus un état de repos ECHEC : un appel a échoué, le robot attend une commande.
 
 Commandes (texte sur /argos/commande) : « veille », « appel <point> », « patrouille »
-État publié sur /argos/etat : « VEILLE », « APPEL alpha », « PATROUILLE beta », « ECHEC alpha »
+État publié sur /argos/etat : « VEILLE », « APPEL alpha », « PATROUILLE beta »...
 
 Usage :
   ros2 run argos_mission repartiteur --ros-args -p fichier_points:=<chemin du YAML>
