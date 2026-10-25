@@ -28,6 +28,7 @@ setup(
         'console_scripts': [
             # nom de la commande = module:fonction à appeler
             'aller_a = argos_mission.aller_a:main',
+            'repartiteur = argos_mission.repartiteur:main',
         ],
     },
 )
