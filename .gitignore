@@ -1,0 +1,4 @@
+# Dossiers générés par colcon build — jamais versionnés
+build/
+install/
+log/
