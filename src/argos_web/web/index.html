@@ -248,6 +248,12 @@
       <div class="rangee" style="margin-top:12px">
         <button id="btn-marge">Appliquer</button>
       </div>
+      <div class="aide hors-carto" style="margin-top:16px">Le robot refuse toute destination ?
+        Par exemple s'il n'a pas été placé dans les 5 min après le démarrage :
+        placez-le, puis redémarrez la navigation.</div>
+      <div class="rangee hors-carto">
+        <button id="btn-redemarrer">Redémarrer la navigation</button>
+      </div>
     </section>
 
     <section class="carte">
@@ -853,6 +859,7 @@ $("btn-abandonner").addEventListener("click", () => {
 // ===== Boutons de mode =======================================================
 $("btn-patrouille").addEventListener("click", () => envoyer("patrouille"));
 $("btn-base").addEventListener("click", () => envoyer("base"));
+$("btn-redemarrer").addEventListener("click", () => envoyer("redemarrer_navigation"));
 $("btn-veille").addEventListener("click", () => envoyer("veille"));
 
 // ===== Réglage de la marge (paramètre Nav2 modifié en direct) ================

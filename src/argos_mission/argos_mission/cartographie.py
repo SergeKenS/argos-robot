@@ -7,6 +7,9 @@ de la position du robot sur la carte (transformation map → odom).
 On passe de l'un à l'autre avec les services standards de cycle de vie de ROS 2,
 sans rien relancer.
 
+Le même mécanisme sert à redémarrer la navigation si son lancement a avorté
+(voir redemarrer_navigation).
+
 Ces fonctions font tourner ROS en attendant les réponses : comme pour BasicNavigator,
 on les appelle depuis la boucle principale du répartiteur, jamais depuis une réception
 de message.
@@ -14,9 +17,18 @@ de message.
 import subprocess
 
 import rclpy
-from lifecycle_msgs.msg import Transition
-from lifecycle_msgs.srv import ChangeState
+from lifecycle_msgs.msg import State, Transition
+from lifecycle_msgs.srv import ChangeState, GetState
 from nav2_msgs.srv import ManageLifecycleNodes
+
+# Serveurs de navigation, dans l'ordre de démarrage (mêmes noms que argos.launch.py).
+SERVEURS_NAVIGATION = ['controller_server', 'smoother_server', 'planner_server',
+                       'behavior_server', 'bt_navigator', 'velocity_smoother',
+                       'collision_monitor']
+
+# Activer un serveur qui a une carte de coûts attend que le robot soit placé
+# (initial_transform_timeout = 300 s dans nav2_params.yaml) : on laisse un peu plus.
+DELAI_ACTIVATION = 330.0
 
 
 def appeler_service(noeud, type_service, nom, requete, delai=10.0):
@@ -46,14 +58,49 @@ def localisation(noeud, commande):
     return reponse is not None and reponse.success
 
 
-def slam(noeud, *transitions):
-    """Applique des transitions de cycle de vie à slam_toolbox, dans l'ordre."""
+def changer_etat(noeud, nom, *transitions, delai=10.0):
+    """Applique des transitions de cycle de vie au nœud « nom », dans l'ordre."""
     for transition in transitions:
         requete = ChangeState.Request()
         requete.transition.id = transition
-        reponse = appeler_service(noeud, ChangeState, 'slam_toolbox/change_state', requete)
+        reponse = appeler_service(noeud, ChangeState, f'{nom}/change_state', requete, delai)
         if reponse is None or not reponse.success:
-            noeud.get_logger().error(f'slam_toolbox : transition {transition} refusée')
+            noeud.get_logger().error(f'{nom} : transition {transition} refusée')
+            return False
+    return True
+
+
+def slam(noeud, *transitions):
+    """Applique des transitions de cycle de vie à slam_toolbox, dans l'ordre."""
+    return changer_etat(noeud, 'slam_toolbox', *transitions)
+
+
+def redemarrer_navigation(noeud):
+    """Remet en marche les serveurs de navigation restés arrêtés.
+
+    Cas typique : le robot n'a pas été placé dans les 5 min après le lancement.
+    Nav2 a alors abandonné son démarrage à mi-chemin : certains serveurs sont
+    actifs, d'autres seulement configurés. On reprend serveur par serveur :
+    configurer ce qui ne l'est pas, activer ce qui ne l'est pas.
+    (Un RESET du gestionnaire de Nav2 risquerait d'échouer : il s'arrête dès qu'il
+    ne peut pas désactiver un serveur, ce qui arrive si ce serveur n'est pas actif.)
+    """
+    for nom in SERVEURS_NAVIGATION:
+        reponse = appeler_service(noeud, GetState, f'{nom}/get_state', GetState.Request())
+        if reponse is None:
+            return False
+        etat = reponse.current_state.id
+        if etat == State.PRIMARY_STATE_UNCONFIGURED:
+            if not changer_etat(noeud, nom, Transition.TRANSITION_CONFIGURE):
+                return False
+            etat = State.PRIMARY_STATE_INACTIVE
+        if etat == State.PRIMARY_STATE_INACTIVE:
+            if not changer_etat(noeud, nom, Transition.TRANSITION_ACTIVATE,
+                                delai=DELAI_ACTIVATION):
+                return False
+        elif etat != State.PRIMARY_STATE_ACTIVE:
+            noeud.get_logger().error(f'{nom} : état {reponse.current_state.label}, '
+                                     'relancer le robot')
             return False
     return True
 

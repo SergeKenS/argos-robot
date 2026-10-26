@@ -14,6 +14,7 @@ Commandes (texte sur /argos/commande) :
   « supprimer <nom> »
   « definir_patrouille <nom> <nom>... » : ordre de patrouille (vide = aucune)
   « carte <nom> »              : charge maps/<nom>.yaml et ses points maps/<nom>_points.yaml
+  « redemarrer_navigation »    : relance Nav2 si son démarrage a avorté
   « cartographier »            : passe en CARTOGRAPHIE (SLAM Toolbox)
   « enregistrer <nom> »        : sauvegarde la nouvelle carte et repasse en navigation dessus
   « abandonner »               : quitte la cartographie sans sauvegarder
@@ -214,6 +215,8 @@ class Repartiteur(BasicNavigator):
             self.changer_carte(mots[1])
         elif action == 'cartographier':
             self.demarrer_cartographie()
+        elif action == 'redemarrer_navigation':
+            self.redemarrer_navigation()
         else:
             self.signaler('avertissement', f'Commande inconnue : « {texte} »')
 
@@ -253,7 +256,8 @@ class Repartiteur(BasicNavigator):
         if self.goToPose(creer_pose(self, self.points[nom]), behavior_tree=ARBRE_NAVIGATION):
             self.publier_etat()
         else:
-            self.signaler('erreur', 'Destination refusée : Nav2 est-il actif ?')
+            self.signaler('erreur', 'Destination refusée : placer le robot, puis '
+                          '« Redémarrer la navigation ».')
             self.mode = 'ECHEC'
             self.publier_etat()
 
@@ -306,6 +310,20 @@ class Repartiteur(BasicNavigator):
         self.charger_points()
         self.publier_points()
         self.signaler('info', f'Carte {nom} chargée : replacer le robot sur la carte.')
+
+    def redemarrer_navigation(self):
+        """Relance les serveurs de Nav2 si leur démarrage a avorté (voir cartographie.py)."""
+        # Leur activation attend que le robot soit placé : inutile d'essayer avant.
+        if self.pose_robot is None:
+            self.signaler('avertissement', "Placer d'abord le robot sur la carte.")
+            return
+        self.annuler_mission()
+        self.passer_au_repos('VEILLE')
+        self.signaler('info', 'Redémarrage de la navigation...')
+        if cartographie.redemarrer_navigation(self):
+            self.signaler('info', 'Navigation prête.')
+        else:
+            self.signaler('erreur', 'Redémarrage impossible : relancer le robot.')
 
     # --- Création d'une carte (voir cartographie.py) ---------------------------
 

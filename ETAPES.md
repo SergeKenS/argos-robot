@@ -199,3 +199,10 @@ qu'on ne les a pas envoyées sur GitHub (`git add maps && git commit && git push
 Le répartiteur publie ses messages sur `/argos/journal` (point enregistré, commande
 refusée, échec de sauvegarde...). Ils s'affichent dans le **Journal** de la page,
 préfixés « Robot : » (orange = avertissement, rouge = erreur).
+
+## Redémarrer la navigation (non testé)
+
+Si le robot n'a pas été placé dans les 5 min, Nav2 abandonne son démarrage et refuse
+toute destination. Sans rien relancer : placer le robot, puis bouton **Redémarrer la
+navigation** (Réglages), ou commande `redemarrer_navigation`. Le répartiteur configure
+puis active un par un les serveurs de navigation restés arrêtés.
