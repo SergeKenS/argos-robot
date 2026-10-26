@@ -170,7 +170,7 @@ Options : `carte:=arene` (fichiers `maps/<carte>.yaml` et `maps/<carte>_points.y
 Placer le robot depuis la page web (bouton **Placer le robot sur la carte** : appuyer
 sur sa position, glisser vers où il regarde) **dans les 60 s** après le lancement.
 
-## Page web : placer le robot ✔, changer de carte (non testé)
+## Page web : placer le robot ✔, changer de carte ✔
 
 - **Placer le robot sur la carte** : remplace « 2D Pose Estimate » de RViz.
 - **Charger cette carte** : liste des `maps/<nom>.yaml`. Le robot s'arrête, la carte
@@ -184,9 +184,12 @@ sur sa position, glisser vers où il regarde) **dans les 60 s** après le lancem
    ▲ ▼ ◀ ▶ (ou les flèches du clavier). Seulement en veille. Vitesses : 0,2 m/s et
    0,8 rad/s. Publie sur `/cmd_vel_nav`, donc passe par `collision_monitor` (le robot
    ralentit puis s'arrête devant un obstacle). Bouton relâché ou page figée : arrêt.
-2. **Nouvelle carte** (non testé) : bouton « Nouvelle carte » (commande `cartographier`).
+2. **Nouvelle carte** ✔ : bouton « Nouvelle carte » (commande `cartographier`).
    La localisation (map_server + AMCL) est arrêtée, SLAM Toolbox démarré, sans relancer.
    Promener le robot avec le pilotage manuel, la carte se dessine sur la page.
 3. **Enregistrer** (commande `enregistrer <nom>`) : `maps/<nom>.yaml` + `.pgm`, un point
    `base` au point de départ, retour en navigation, robot replacé automatiquement.
    **Abandonner** (commande `abandonner`) : retour à la carte d'avant, replacer le robot.
+
+Note : les cartes créées depuis la page n'existent que sur la machine du robot tant
+qu'on ne les a pas envoyées sur GitHub (`git add maps && git commit && git push`).
