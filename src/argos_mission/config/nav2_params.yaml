@@ -98,8 +98,8 @@ controller_server:
       yaw_goal_tolerance: 0.25
     FollowPath:
       plugin: "nav2_mppi_controller::MPPIController"
-      time_steps: 56
-      model_dt: 0.05
+      time_steps: 28  # ARGOS : 56 par défaut ; 28 x 0.1 s = même horizon de 2.8 s
+      model_dt: 0.1  # ARGOS : 0.05 par défaut ; doit être >= période du contrôleur (1/10 Hz)
       batch_size: 1000  # ARGOS : 2000 par défaut (trajectoires simulées par cycle)
       ax_max: 3.0
       ax_min: -3.0
