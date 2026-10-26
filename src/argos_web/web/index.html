@@ -148,6 +148,7 @@
   #journal li { padding: 4px 0; border-bottom: 1px solid var(--border); display: flex; gap: 10px; }
   #journal time { color: var(--muted); font-variant-numeric: tabular-nums; }
   #journal .erreur { color: var(--danger); }
+  #journal .avertissement { color: var(--warn); }
 
   /* Sans connexion au robot, les commandes sont désactivées. */
   body.deconnecte .commande { opacity: .45; pointer-events: none; }
@@ -337,6 +338,13 @@ function abonner() {
 
   new ROSLIB.Topic({ ros, name: "/argos/points", messageType: "std_msgs/msg/String" })
     .subscribe((msg) => recevoirPoints(JSON.parse(msg.data)));
+
+  // Messages du répartiteur (point enregistré, commande refusée, échec...).
+  new ROSLIB.Topic({ ros, name: "/argos/journal", messageType: "std_msgs/msg/String" })
+    .subscribe((msg) => {
+      const { niveau, texte } = JSON.parse(msg.data);
+      journal(`Robot : ${texte}`, niveau);
+    });
 
   new ROSLIB.Topic({ ros, name: "/map", messageType: "nav_msgs/msg/OccupancyGrid" })
     .subscribe(recevoirCarte);
@@ -884,13 +892,15 @@ $("btn-marge").addEventListener("click", () => {
 });
 
 // ===== Journal ===============================================================
-function journal(texte, erreur = false) {
+// niveau : "info", "avertissement" ou "erreur" (true = "erreur", pour les appels courts).
+function journal(texte, niveau = "info") {
   const li = document.createElement("li");
   const heure = document.createElement("time");
   heure.textContent = new Date().toLocaleTimeString("fr-CA");
   const span = document.createElement("span");
   span.textContent = texte;
-  if (erreur) span.className = "erreur";
+  if (niveau === true) niveau = "erreur";
+  if (niveau !== "info") span.className = niveau;
   li.append(heure, span);
   $("journal").prepend(li);
   while ($("journal").children.length > 30) $("journal").lastChild.remove();

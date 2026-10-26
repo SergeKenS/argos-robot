@@ -19,6 +19,7 @@ Commandes (texte sur /argos/commande) :
   « abandonner »               : quitte la cartographie sans sauvegarder
 État publié sur /argos/etat : « VEILLE », « APPEL alpha », « PATROUILLE beta »...
 Points, carte actuelle et cartes disponibles publiés sur /argos/points (JSON).
+Messages pour l'utilisateur publiés sur /argos/journal (JSON : niveau, texte).
 
 Usage :
   ros2 run argos_mission repartiteur --ros-args -p fichier_points:=<chemin du YAML>
@@ -69,6 +70,8 @@ class Repartiteur(BasicNavigator):
 
     def __init__(self):
         super().__init__(node_name='repartiteur')
+        # Messages pour l'utilisateur, affichés dans le journal de la page web.
+        self.pub_journal = self.create_publisher(String, '/argos/journal', 10)
 
         # Chemin du fichier de points, passé au lancement (un fichier par carte).
         # Il est rangé à côté de sa carte : maps/<carte>_points.yaml.
@@ -126,6 +129,16 @@ class Repartiteur(BasicNavigator):
                    'carte': self.carte, 'cartes': self.lister_cartes()}
         self.pub_points.publish(String(data=json.dumps(donnees)))
 
+    def signaler(self, niveau, texte):
+        """Écrit un message dans le terminal ET dans le journal de la page web.
+
+        niveau : 'info', 'avertissement' ou 'erreur'.
+        """
+        ecrire = {'info': self.get_logger().info, 'avertissement': self.get_logger().warn,
+                  'erreur': self.get_logger().error}[niveau]
+        ecrire(texte)
+        self.pub_journal.publish(String(data=json.dumps({'niveau': niveau, 'texte': texte})))
+
     def publier_etat(self):
         texte = self.mode if self.cible is None else f'{self.mode} {self.cible}'
         self.pub_etat.publish(String(data=texte))
@@ -168,7 +181,8 @@ class Repartiteur(BasicNavigator):
             elif action == 'abandonner':
                 self.abandonner_cartographie()
             else:
-                self.get_logger().warn('Cartographie en cours : enregistrer ou abandonner.')
+                self.signaler('avertissement',
+                              'Cartographie en cours : enregistrer ou abandonner.')
             return
 
         if action == 'veille':
@@ -176,14 +190,14 @@ class Repartiteur(BasicNavigator):
             self.passer_au_repos('VEILLE')
         elif action == 'appel' and len(mots) == 2:
             if mots[1] not in self.points:
-                self.get_logger().warn(f'Point inconnu : {mots[1]} (commande ignorée)')
+                self.signaler('avertissement', f'Point inconnu : {mots[1]} (commande ignorée)')
                 return
             self.annuler_mission()
             self.mode = 'APPEL'
             self.lancer_vers(mots[1])
         elif action == 'patrouille':
             if not self.patrouille:
-                self.get_logger().warn('Aucune patrouille définie (commande ignorée)')
+                self.signaler('avertissement', 'Aucune patrouille définie (commande ignorée)')
                 return
             self.annuler_mission()
             self.mode = 'PATROUILLE'
@@ -201,7 +215,7 @@ class Repartiteur(BasicNavigator):
         elif action == 'cartographier':
             self.demarrer_cartographie()
         else:
-            self.get_logger().warn(f'Commande inconnue : « {texte} »')
+            self.signaler('avertissement', f'Commande inconnue : « {texte} »')
 
     def fin_de_mission(self):
         """Nav2 a terminé la mission en cours : on décide de la suite."""
@@ -212,7 +226,7 @@ class Repartiteur(BasicNavigator):
             self.passer_au_repos('VEILLE')
         elif self.mode == 'APPEL':
             if resultat == TaskResult.SUCCEEDED:
-                self.get_logger().info(f'Arrivé à {self.cible}.')
+                self.signaler('info', f'Arrivé à {self.cible}.')
                 self.passer_au_repos('VEILLE')
             else:
                 # On garde le nom du point dans l'état pour savoir lequel a échoué.
@@ -223,7 +237,7 @@ class Repartiteur(BasicNavigator):
                 self.echecs_consecutifs = 0
             else:
                 self.echecs_consecutifs += 1
-                self.get_logger().warn(f'{self.cible} inaccessible, point suivant.')
+                self.signaler('avertissement', f'{self.cible} inaccessible, point suivant.')
             # Si aucun point n'est atteignable, on arrête au lieu de boucler sans fin.
             if self.echecs_consecutifs >= len(self.patrouille):
                 self.mode = 'ECHEC'
@@ -239,7 +253,7 @@ class Repartiteur(BasicNavigator):
         if self.goToPose(creer_pose(self, self.points[nom]), behavior_tree=ARBRE_NAVIGATION):
             self.publier_etat()
         else:
-            self.get_logger().error('Destination refusée : Nav2 est-il actif ?')
+            self.signaler('erreur', 'Destination refusée : Nav2 est-il actif ?')
             self.mode = 'ECHEC'
             self.publier_etat()
 
@@ -264,7 +278,7 @@ class Repartiteur(BasicNavigator):
         patrouille = contenu.get('patrouille') or []
         self.patrouille = [nom for nom in patrouille if nom in self.points]
         if len(self.patrouille) != len(patrouille):
-            self.get_logger().warn('Points de patrouille inconnus ignorés.')
+            self.signaler('avertissement', 'Points de patrouille inconnus ignorés.')
 
     def lister_cartes(self):
         """Cartes disponibles : les <nom>.yaml du dossier, sauf les fichiers de points."""
@@ -278,7 +292,7 @@ class Repartiteur(BasicNavigator):
     def changer_carte(self, nom):
         fichier_carte = os.path.join(self.dossier_cartes, nom + '.yaml')
         if not FORMAT_NOM.match(nom) or not os.path.isfile(fichier_carte):
-            self.get_logger().warn(f'Carte introuvable : {fichier_carte}')
+            self.signaler('avertissement', f'Carte introuvable : {fichier_carte}')
             return
         self.annuler_mission()
         self.passer_au_repos('VEILLE')
@@ -291,7 +305,7 @@ class Repartiteur(BasicNavigator):
         self.chemin_points = os.path.join(self.dossier_cartes, nom + '_points.yaml')
         self.charger_points()
         self.publier_points()
-        self.get_logger().info(f'Carte {nom} chargée : replacer le robot sur la carte.')
+        self.signaler('info', f'Carte {nom} chargée : replacer le robot sur la carte.')
 
     # --- Création d'une carte (voir cartographie.py) ---------------------------
 
@@ -304,19 +318,20 @@ class Repartiteur(BasicNavigator):
             self.mode = 'CARTOGRAPHIE'
             self.publier_etat()
         else:
-            self.get_logger().error('Impossible de démarrer la cartographie.')
+            self.signaler('erreur', 'Impossible de démarrer la cartographie.')
 
     def enregistrer_carte(self, nom):
         fichier = os.path.join(self.dossier_cartes, nom)
         if not FORMAT_NOM.match(nom):
-            self.get_logger().warn(f'Nom de carte invalide : {nom} (minuscules, chiffres, _)')
+            self.signaler('avertissement',
+                          f'Nom de carte invalide : {nom} (minuscules, chiffres, _)')
             return
         if os.path.exists(fichier + '.yaml'):
-            self.get_logger().warn(f'La carte {nom} existe déjà : choisir un autre nom.')
+            self.signaler('avertissement', f'La carte {nom} existe déjà : choisir un autre nom.')
             return
         if not cartographie.sauvegarder(self, fichier):
             # On reste en cartographie : rien n'est perdu, on peut réessayer.
-            self.get_logger().error(f'Échec de la sauvegarde de {fichier}.')
+            self.signaler('erreur', f'Échec de la sauvegarde de {fichier}.')
             return
 
         # Positions à retenir avant d'arrêter SLAM Toolbox.
@@ -336,7 +351,7 @@ class Repartiteur(BasicNavigator):
         # à AMCL, ainsi pas besoin de « Placer le robot ».
         self.setInitialPose(creer_pose(self, self.pose_vers_point(pose_actuelle)))
         self.passer_au_repos('VEILLE')
-        self.get_logger().info(f'Carte {nom} enregistrée et chargée.')
+        self.signaler('info', f'Carte {nom} enregistrée et chargée.')
 
     def abandonner_cartographie(self):
         cartographie.arreter(self)
@@ -344,7 +359,7 @@ class Repartiteur(BasicNavigator):
         self.changeMap(os.path.join(self.dossier_cartes, self.carte + '.yaml'))
         self.clearAllCostmaps()
         self.passer_au_repos('VEILLE')
-        self.get_logger().info('Cartographie abandonnée : replacer le robot sur la carte.')
+        self.signaler('info', 'Cartographie abandonnée : replacer le robot sur la carte.')
 
     @staticmethod
     def pose_vers_point(pose):
@@ -361,47 +376,48 @@ class Repartiteur(BasicNavigator):
     def ajouter_point(self, nom, coordonnees):
         """Ajoute (ou remplace) un point : position du robot, ou x y donnés."""
         if not FORMAT_NOM.match(nom):
-            self.get_logger().warn(f'Nom invalide : {nom} (minuscules, chiffres, _)')
+            self.signaler('avertissement', f'Nom invalide : {nom} (minuscules, chiffres, _)')
             return
         if coordonnees:
             # Point choisi sur la carte : orientation 0 par défaut.
             try:
                 x, y = (float(valeur) for valeur in coordonnees)
             except ValueError:
-                self.get_logger().warn(f'Coordonnées invalides : {coordonnees}')
+                self.signaler('avertissement', f'Coordonnées invalides : {coordonnees}')
                 return
             point = {'x': round(x, 2), 'y': round(y, 2), 'theta': 0.0}
         else:
             # Position actuelle du robot, telle qu'estimée par AMCL.
             if self.pose_robot is None:
-                self.get_logger().warn('Position du robot inconnue : le placer sur la carte.')
+                self.signaler('avertissement',
+                              'Position du robot inconnue : le placer sur la carte.')
                 return
             point = self.pose_vers_point(self.pose_robot)
 
         self.points[nom] = point
         self.enregistrer_points()
-        self.get_logger().info(f'Point {nom} enregistré : x={point["x"]} y={point["y"]}')
+        self.signaler('info', f'Point {nom} enregistré : x={point["x"]} y={point["y"]}')
 
     def supprimer_point(self, nom):
         if nom not in self.points:
-            self.get_logger().warn(f'Point inconnu : {nom}')
+            self.signaler('avertissement', f'Point inconnu : {nom}')
             return
         del self.points[nom]
         if nom in self.patrouille:
             self.patrouille = [p for p in self.patrouille if p != nom]
             self.verifier_patrouille()
         self.enregistrer_points()
-        self.get_logger().info(f'Point {nom} supprimé.')
+        self.signaler('info', f'Point {nom} supprimé.')
 
     def definir_patrouille(self, noms):
         inconnus = [nom for nom in noms if nom not in self.points]
         if inconnus:
-            self.get_logger().warn(f'Points inconnus : {", ".join(inconnus)}')
+            self.signaler('avertissement', f'Points inconnus : {", ".join(inconnus)}')
             return
         self.patrouille = noms
         self.verifier_patrouille()
         self.enregistrer_points()
-        self.get_logger().info(f'Patrouille : {" → ".join(noms) or "aucune"}')
+        self.signaler('info', f'Patrouille : {" → ".join(noms) or "aucune"}')
 
     def verifier_patrouille(self):
         """Si la patrouille en cours se retrouve vide, on s'arrête proprement."""
@@ -419,7 +435,7 @@ class Repartiteur(BasicNavigator):
                 yaml.safe_dump(contenu, fichier, default_flow_style=None,
                                sort_keys=False, allow_unicode=True)
         except OSError as erreur:
-            self.get_logger().error(f"Impossible d'écrire {self.chemin_points} : {erreur}")
+            self.signaler('erreur', f"Impossible d'écrire {self.chemin_points} : {erreur}")
         self.publier_points()
 
 

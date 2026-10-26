@@ -168,7 +168,7 @@ ros2 launch argos_mission argos.launch.py
 Options : `carte:=arene` (fichiers `maps/<carte>.yaml` et `maps/<carte>_points.yaml`),
 `rviz:=true` (RViz, outil de développement), `gazebo_gui:=false`.
 Placer le robot depuis la page web (bouton **Placer le robot sur la carte** : appuyer
-sur sa position, glisser vers où il regarde) **dans les 60 s** après le lancement.
+sur sa position, glisser vers où il regarde). Délai : 1 h (`initial_transform_timeout`, 60 s par défaut dans Nav2).
 
 ## Page web : placer le robot ✔, changer de carte ✔
 
@@ -193,3 +193,9 @@ sur sa position, glisser vers où il regarde) **dans les 60 s** après le lancem
 
 Note : les cartes créées depuis la page n'existent que sur la machine du robot tant
 qu'on ne les a pas envoyées sur GitHub (`git add maps && git commit && git push`).
+
+## Messages du robot sur la page (non testé)
+
+Le répartiteur publie ses messages sur `/argos/journal` (point enregistré, commande
+refusée, échec de sauvegarde...). Ils s'affichent dans le **Journal** de la page,
+préfixés « Robot : » (orange = avertissement, rouge = erreur).
