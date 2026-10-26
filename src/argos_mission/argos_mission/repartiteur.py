@@ -12,16 +12,25 @@ Commandes (texte sur /argos/commande) : « veille », « appel <point> », « pa
 Usage :
   ros2 run argos_mission repartiteur --ros-args -p fichier_points:=<chemin du YAML>
 """
+import os
 import sys
 
 import rclpy
 import yaml
+from ament_index_python.packages import get_package_share_directory
 from nav2_simple_commander.robot_navigator import BasicNavigator, TaskResult
 from rclpy.qos import DurabilityPolicy, QoSProfile, ReliabilityPolicy
 from rclpy.signals import SignalHandlerOptions
 from std_msgs.msg import String
 
 from argos_mission.aller_a import creer_pose
+
+# Arbre de comportement fourni par Nav2 : il ne recalcule le chemin que si le
+# chemin actuel devient bloqué. Évite que le robot hésite entre deux chemins
+# de coût presque égal (comportement par défaut : recalcul chaque seconde).
+ARBRE_NAVIGATION = os.path.join(
+    get_package_share_directory('nav2_bt_navigator'), 'behavior_trees',
+    'navigate_w_recovery_and_replanning_only_if_path_becomes_invalid.xml')
 
 
 class Repartiteur(BasicNavigator):
@@ -155,7 +164,7 @@ class Repartiteur(BasicNavigator):
 
     def lancer_vers(self, nom):
         self.cible = nom
-        if self.goToPose(creer_pose(self, self.points[nom])):
+        if self.goToPose(creer_pose(self, self.points[nom]), behavior_tree=ARBRE_NAVIGATION):
             self.publier_etat()
         else:
             self.get_logger().error('Destination refusée : Nav2 est-il actif ?')
