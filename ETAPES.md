@@ -98,3 +98,16 @@ ros2 param set /local_costmap/local_costmap inflation_layer.inflation_radius 0.2
 ```
 Robot qui tourne sur place = manœuvre de secours de Nav2 (compteur « Recoveries »
 dans RViz) : le contrôleur n'a pas trouvé comment avancer.
+
+## Optimisation pour le Raspberry Pi 5 (en cours)
+
+Allègements dans `config/nav2_params.yaml` (lignes marquées « ARGOS ») :
+- MPPI : 1000 trajectoires (au lieu de 2000), 10 Hz (au lieu de 20 ; ne pas
+  descendre plus bas), visualisation désactivée (la doc MPPI la déconseille hors débogage)
+- Carte locale : `obstacle_layer` 2D au lieu de `voxel_layer` 3D (lidar 2D)
+- AMCL : 200 à 1000 particules (au lieu de 500 à 2000)
+
+À venir : fichier de lancement réduit (sans docking, routes, suivi de points).
+
+Mesurer sur le Pi : `ros2 topic hz /cmd_vel_nav`, `htop`, `vcgencmd measure_temp`,
+`vcgencmd get_throttled` (≠ 0x0 = le Pi ralentit à cause de la chaleur).
