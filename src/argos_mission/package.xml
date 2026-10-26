@@ -13,6 +13,18 @@
   <exec_depend>nav2_simple_commander</exec_depend>
   <exec_depend>nav2_bt_navigator</exec_depend>
   <exec_depend>std_msgs</exec_depend>
+
+  <!-- Dépendances du fichier de lancement argos.launch.py -->
+  <exec_depend>launch</exec_depend>
+  <exec_depend>launch_ros</exec_depend>
+  <exec_depend>navigation2</exec_depend>
+  <exec_depend>nav2_bringup</exec_depend>
+  <exec_depend>nav2_minimal_tb3_sim</exec_depend>
+  <exec_depend>ros_gz_sim</exec_depend>
+  <exec_depend>robot_state_publisher</exec_depend>
+  <exec_depend>rclcpp_components</exec_depend>
+  <exec_depend>xacro</exec_depend>
+  <exec_depend>argos_web</exec_depend>
   <exec_depend>ament_index_python</exec_depend>
   <exec_depend>python3-yaml</exec_depend>
 

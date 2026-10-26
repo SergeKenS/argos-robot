@@ -154,3 +154,14 @@ Ouvrir **http://localhost:8080** (depuis un téléphone sur le même réseau :
 
 ⚠ Aucune protection : toute personne sur le réseau peut piloter le robot. À traiter
 avant un usage réel.
+
+## Lancement en une commande (non testé)
+
+`src/argos_mission/launch/argos.launch.py` démarre tout : simulation, Nav2 réduit
+(sans docking, routes, suivi de points, dans un seul processus), répartiteur, page web, RViz.
+```
+ros2 launch argos_mission argos.launch.py
+```
+Options : `carte:=arene` (fichiers `maps/<carte>.yaml` et `maps/<carte>_points.yaml`),
+`rviz:=false`, `gazebo_gui:=false`.
+Toujours faire **2D Pose Estimate** dans RViz dans les 60 s.

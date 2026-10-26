@@ -10,8 +10,10 @@ setup(
         ('share/ament_index/resource_index/packages',
             ['resource/' + package_name]),
         ('share/' + package_name, ['package.xml']),
-        # Installe les points nommés, lus par aller_a.py
-        ('share/' + package_name + '/config', ['config/points.yaml']),
+        # Points nommés (lus par aller_a.py) et paramètres Nav2 (lus par argos.launch.py)
+        ('share/' + package_name + '/config',
+            ['config/points.yaml', 'config/nav2_params.yaml']),
+        ('share/' + package_name + '/launch', ['launch/argos.launch.py']),
     ],
     install_requires=['setuptools'],
     zip_safe=True,
