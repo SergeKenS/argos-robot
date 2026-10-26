@@ -121,6 +121,10 @@
     border: 1px solid var(--border); background: var(--surface-2); color: var(--text);
   }
   input[type=text]:focus { outline: 2px solid var(--accent-soft); border-color: var(--accent); }
+  select {
+    font: inherit; flex: 1; min-width: 0; padding: 9px 12px; border-radius: 10px;
+    border: 1px solid var(--border); background: var(--surface-2); color: var(--text);
+  }
   .aide { font-size: 12px; color: var(--muted); margin: 6px 0 10px; }
   .erreur { color: var(--danger); }
 
@@ -164,6 +168,10 @@
     <div class="rangee commande" style="margin-top:12px">
       <button id="btn-placer" title="Équivalent de « 2D Pose Estimate » dans RViz">
         Placer le robot sur la carte</button>
+    </div>
+    <div class="rangee commande" style="margin-top:8px">
+      <select id="choix-carte" aria-label="Carte"></select>
+      <button id="btn-carte">Charger cette carte</button>
     </div>
   </section>
 
@@ -235,6 +243,7 @@ let carte = null;               // dernier message /map
 let imageCarte = null;          // la carte dessinée une fois, réutilisée à chaque image
 let points = {};                // { nom: {x, y, theta} }
 let patrouille = [];            // [ nom, ... ]
+let carteActuelle = null;       // nom de la carte chargée (ex. « arene »)
 let etat = { mode: null, cible: null };
 let selection = null;           // emplacement cliqué sur la carte {x, y}
 let robot = null;               // position du robot sur la carte {x, y, t}
@@ -330,9 +339,29 @@ function recevoirEtat(texte) {
 function recevoirPoints(donnees) {
   points = donnees.points || {};
   patrouille = donnees.patrouille || [];
+
+  // Nouvelle carte chargée : l'ancienne position du robot n'a plus de sens.
+  if (carteActuelle && donnees.carte !== carteActuelle) {
+    robot = null; carteVersOdom = null; selection = null;
+    journal(`Carte « ${donnees.carte} » chargée. Placez le robot sur la carte.`);
+    majBoutonsAjout();
+  }
+  carteActuelle = donnees.carte;
+  const choix = $("choix-carte");
+  choix.replaceChildren(...(donnees.cartes || []).map((nom) => new Option(nom, nom)));
+  choix.value = carteActuelle;
+
   afficherPoints();
   dessiner();
 }
+
+$("btn-carte").addEventListener("click", () => {
+  const nom = $("choix-carte").value;
+  if (!nom || nom === carteActuelle) return;
+  if (confirm(`Charger la carte « ${nom} » ? Le robot s'arrête et devra être replacé.`)) {
+    envoyer(`carte ${nom}`);
+  }
+});
 
 function recevoirCarte(msg) {
   carte = msg;

@@ -166,3 +166,11 @@ Options : `carte:=arene` (fichiers `maps/<carte>.yaml` et `maps/<carte>_points.y
 `rviz:=true` (RViz, outil de développement), `gazebo_gui:=false`.
 Placer le robot depuis la page web (bouton **Placer le robot sur la carte** : appuyer
 sur sa position, glisser vers où il regarde) **dans les 60 s** après le lancement.
+
+## Page web : placer le robot ✔, changer de carte (non testé)
+
+- **Placer le robot sur la carte** : remplace « 2D Pose Estimate » de RViz.
+- **Charger cette carte** : liste des `maps/<nom>.yaml`. Le robot s'arrête, la carte
+  et ses points (`maps/<nom>_points.yaml`, créé vide s'il n'existe pas) sont chargés,
+  puis il faut replacer le robot. Commande équivalente : `carte <nom>`.
+  Au prochain lancement, c'est la carte `carte:=` (par défaut `arene`) qui est chargée.

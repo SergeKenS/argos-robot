@@ -12,8 +12,9 @@ Commandes (texte sur /argos/commande) :
   « ajouter <nom> <x> <y> »    : enregistre un point choisi sur la carte
   « supprimer <nom> »
   « definir_patrouille <nom> <nom>... » : ordre de patrouille (vide = aucune)
+  « carte <nom> »              : charge maps/<nom>.yaml et ses points maps/<nom>_points.yaml
 État publié sur /argos/etat : « VEILLE », « APPEL alpha », « PATROUILLE beta »...
-Points publiés sur /argos/points (JSON) à chaque modification.
+Points, carte actuelle et cartes disponibles publiés sur /argos/points (JSON).
 
 Usage :
   ros2 run argos_mission repartiteur --ros-args -p fichier_points:=<chemin du YAML>
@@ -65,14 +66,11 @@ class Repartiteur(BasicNavigator):
         super().__init__(node_name='repartiteur')
 
         # Chemin du fichier de points, passé au lancement (un fichier par carte).
+        # Il est rangé à côté de sa carte : maps/<carte>_points.yaml.
         self.chemin_points = self.declare_parameter('fichier_points', '').value
-        with open(self.chemin_points) as fichier:
-            contenu = yaml.safe_load(fichier)
-        self.points = contenu['points']
-        self.patrouille = contenu.get('patrouille') or []
-        for nom in self.patrouille:
-            if nom not in self.points:
-                raise ValueError(f'Point de patrouille inconnu : {nom}')
+        self.dossier_cartes = os.path.dirname(self.chemin_points)
+        self.carte = os.path.basename(self.chemin_points).removesuffix('_points.yaml')
+        self.charger_points()
 
         self.mode = 'VEILLE'
         self.cible = None              # point visé par la mission en cours
@@ -108,7 +106,8 @@ class Repartiteur(BasicNavigator):
         self.pose_robot = msg.pose.pose
 
     def publier_points(self):
-        donnees = {'points': self.points, 'patrouille': self.patrouille}
+        donnees = {'points': self.points, 'patrouille': self.patrouille,
+                   'carte': self.carte, 'cartes': self.lister_cartes()}
         self.pub_points.publish(String(data=json.dumps(donnees)))
 
     def publier_etat(self):
@@ -171,6 +170,8 @@ class Repartiteur(BasicNavigator):
             self.supprimer_point(mots[1])
         elif action == 'definir_patrouille':
             self.definir_patrouille(mots[1:])
+        elif action == 'carte' and len(mots) == 2:
+            self.changer_carte(mots[1])
         else:
             self.get_logger().warn(f'Commande inconnue : « {texte} »')
 
@@ -222,6 +223,47 @@ class Repartiteur(BasicNavigator):
         self.mode = mode
         self.cible = None
         self.publier_etat()
+
+    # --- Cartes ----------------------------------------------------------------
+
+    def charger_points(self):
+        """Lit les points de la carte actuelle (aucun point si le fichier n'existe pas)."""
+        contenu = {}
+        if os.path.isfile(self.chemin_points):
+            with open(self.chemin_points) as fichier:
+                contenu = yaml.safe_load(fichier) or {}
+        self.points = contenu.get('points') or {}
+        patrouille = contenu.get('patrouille') or []
+        self.patrouille = [nom for nom in patrouille if nom in self.points]
+        if len(self.patrouille) != len(patrouille):
+            self.get_logger().warn('Points de patrouille inconnus ignorés.')
+
+    def lister_cartes(self):
+        """Cartes disponibles : les <nom>.yaml du dossier, sauf les fichiers de points."""
+        try:
+            fichiers = os.listdir(self.dossier_cartes)
+        except OSError:
+            return [self.carte]
+        return sorted(f.removesuffix('.yaml') for f in fichiers
+                      if f.endswith('.yaml') and not f.endswith('_points.yaml'))
+
+    def changer_carte(self, nom):
+        fichier_carte = os.path.join(self.dossier_cartes, nom + '.yaml')
+        if not FORMAT_NOM.match(nom) or not os.path.isfile(fichier_carte):
+            self.get_logger().warn(f'Carte introuvable : {fichier_carte}')
+            return
+        self.annuler_mission()
+        self.passer_au_repos('VEILLE')
+        # Service « map_server/load_map » de Nav2, appelé via BasicNavigator.
+        # Bloque jusqu'à la réponse (quelques dixièmes de seconde).
+        self.changeMap(fichier_carte)
+        # Les obstacles vus sur l'ancienne carte n'ont plus de sens sur la nouvelle.
+        self.clearAllCostmaps()
+        self.carte = nom
+        self.chemin_points = os.path.join(self.dossier_cartes, nom + '_points.yaml')
+        self.charger_points()
+        self.publier_points()
+        self.get_logger().info(f'Carte {nom} chargée : replacer le robot sur la carte.')
 
     # --- Gestion des points (page web) ------------------------------------------
 
@@ -300,7 +342,7 @@ def main():
     rclpy.init(signal_handler_options=SignalHandlerOptions.NO)
     try:
         repartiteur = Repartiteur()
-    except (OSError, KeyError, ValueError) as erreur:
+    except (OSError, KeyError, ValueError, yaml.YAMLError) as erreur:
         print(f'Fichier de points invalide : {erreur}')
         rclpy.shutdown()
         sys.exit(1)
