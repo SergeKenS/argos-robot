@@ -1,0 +1,637 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ARGOS — Pilotage</title>
+<style>
+  /* ---- Couleurs (thème clair, puis sombre selon le réglage du système) ---- */
+  :root {
+    --bg: #f4f5f7; --surface: #ffffff; --surface-2: #f0f2f5; --border: #e2e5ea;
+    --text: #1b1f24; --muted: #667085;
+    --accent: #2563eb; --accent-soft: #dbe7ff;
+    --ok: #15803d; --ok-soft: #dcfce7;
+    --warn: #b45309; --warn-soft: #fef3c7;
+    --danger: #dc2626; --danger-soft: #fee2e2;
+    --map-free: #ffffff; --map-occ: #1f2937; --map-unknown: #e5e7eb;
+    --robot: #ea580c; --point: #2563eb; --select: #db2777;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #0f1115; --surface: #171a21; --surface-2: #1e222b; --border: #2a2f3a;
+      --text: #e6e8ec; --muted: #9aa3b2;
+      --accent: #60a5fa; --accent-soft: #1e3a5f;
+      --ok: #4ade80; --ok-soft: #14361f;
+      --warn: #fbbf24; --warn-soft: #3d2e0a;
+      --danger: #f87171; --danger-soft: #3f1717;
+      --map-free: #222733; --map-occ: #e5e7eb; --map-unknown: #151821;
+      --robot: #fb923c; --point: #60a5fa; --select: #f472b6;
+    }
+  }
+
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; background: var(--bg); color: var(--text);
+    font: 15px/1.45 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  }
+  header {
+    display: flex; align-items: center; justify-content: space-between; gap: 12px;
+    padding: 14px 20px; background: var(--surface); border-bottom: 1px solid var(--border);
+  }
+  .logo { font-weight: 800; letter-spacing: .12em; font-size: 18px; }
+  .logo small { font-weight: 500; letter-spacing: 0; color: var(--muted); margin-left: 8px; }
+  .badge {
+    display: inline-flex; align-items: center; gap: 8px; padding: 4px 12px;
+    border-radius: 999px; font-size: 13px; font-weight: 600;
+    background: var(--danger-soft); color: var(--danger);
+  }
+  .badge::before { content: ""; width: 8px; height: 8px; border-radius: 50%; background: currentColor; }
+  .badge.ok { background: var(--ok-soft); color: var(--ok); }
+
+  main {
+    display: grid; grid-template-columns: minmax(0, 1fr) 380px; gap: 16px;
+    padding: 16px 20px; max-width: 1400px; margin: 0 auto;
+  }
+  @media (max-width: 900px) { main { grid-template-columns: 1fr; padding: 12px 16px; } }
+  .colonne { display: flex; flex-direction: column; gap: 16px; min-width: 0; }
+
+  .carte {
+    background: var(--surface); border: 1px solid var(--border); border-radius: 14px;
+    padding: 16px;
+  }
+  .carte h2 {
+    margin: 0 0 12px; font-size: 13px; font-weight: 700; text-transform: uppercase;
+    letter-spacing: .06em; color: var(--muted);
+    display: flex; justify-content: space-between; align-items: baseline; gap: 8px;
+  }
+  .carte h2 span { text-transform: none; letter-spacing: 0; font-weight: 500; }
+
+  /* Carte du bâtiment */
+  #zone-carte {
+    position: relative; width: 100%; height: min(70vh, 640px); min-height: 300px;
+    background: var(--map-unknown); border-radius: 10px; overflow: hidden; cursor: crosshair;
+  }
+  #canvas-carte { width: 100%; height: 100%; display: block; }
+  #message-carte {
+    position: absolute; inset: 0; display: flex; align-items: center; justify-content: center;
+    color: var(--muted); pointer-events: none; text-align: center; padding: 20px;
+  }
+  .legende { display: flex; flex-wrap: wrap; gap: 14px; margin-top: 10px; font-size: 13px; color: var(--muted); }
+  .legende i { display: inline-block; width: 10px; height: 10px; border-radius: 50%; margin-right: 6px; vertical-align: -1px; }
+
+  /* État du robot */
+  .etat { display: flex; align-items: center; gap: 12px; margin-bottom: 14px; }
+  .pastille {
+    padding: 6px 14px; border-radius: 10px; font-weight: 800; letter-spacing: .05em;
+    background: var(--surface-2); color: var(--muted);
+  }
+  .pastille.APPEL { background: var(--accent-soft); color: var(--accent); }
+  .pastille.PATROUILLE { background: var(--ok-soft); color: var(--ok); }
+  .pastille.ECHEC { background: var(--danger-soft); color: var(--danger); }
+  #detail-etat { color: var(--muted); }
+
+  /* Boutons */
+  button {
+    font: inherit; font-weight: 600; border-radius: 10px; border: 1px solid var(--border);
+    background: var(--surface-2); color: var(--text); padding: 9px 14px; cursor: pointer;
+  }
+  button:hover:not(:disabled) { border-color: var(--accent); }
+  button:disabled { opacity: .45; cursor: not-allowed; }
+  button.principal { background: var(--accent); border-color: var(--accent); color: #fff; }
+  button.danger { background: var(--danger); border-color: var(--danger); color: #fff; }
+  button.petit { padding: 5px 10px; font-size: 13px; }
+  button.icone { padding: 5px 9px; color: var(--muted); }
+  .rangee { display: flex; gap: 8px; flex-wrap: wrap; }
+  .rangee > button { flex: 1; }
+
+  /* Liste des points */
+  .points { list-style: none; margin: 0 0 14px; padding: 0; display: flex; flex-direction: column; gap: 6px; }
+  .points li {
+    display: flex; align-items: center; gap: 8px; padding: 8px 10px;
+    background: var(--surface-2); border-radius: 10px;
+  }
+  .points .nom { font-weight: 600; }
+  .points .coord { font-size: 12px; color: var(--muted); font-variant-numeric: tabular-nums; }
+  .points .infos { flex: 1; min-width: 0; }
+  .points label { font-size: 12px; color: var(--muted); display: flex; align-items: center; gap: 4px; cursor: pointer; }
+  .vide { color: var(--muted); font-size: 14px; }
+
+  input[type=text] {
+    font: inherit; width: 100%; padding: 9px 12px; border-radius: 10px;
+    border: 1px solid var(--border); background: var(--surface-2); color: var(--text);
+  }
+  input[type=text]:focus { outline: 2px solid var(--accent-soft); border-color: var(--accent); }
+  .aide { font-size: 12px; color: var(--muted); margin: 6px 0 10px; }
+  .erreur { color: var(--danger); }
+
+  /* Réglages */
+  .reglage { display: flex; align-items: center; gap: 12px; }
+  input[type=range] { flex: 1; accent-color: var(--accent); }
+  .valeur { font-weight: 700; font-variant-numeric: tabular-nums; min-width: 64px; text-align: right; }
+
+  /* Journal */
+  #journal { list-style: none; margin: 0; padding: 0; max-height: 220px; overflow-y: auto; font-size: 13px; }
+  #journal li { padding: 4px 0; border-bottom: 1px solid var(--border); display: flex; gap: 10px; }
+  #journal time { color: var(--muted); font-variant-numeric: tabular-nums; }
+  #journal .erreur { color: var(--danger); }
+
+  /* Sans connexion au robot, les commandes sont désactivées. */
+  body.deconnecte .commande { opacity: .45; pointer-events: none; }
+</style>
+</head>
+<body class="deconnecte">
+
+<header>
+  <div class="logo">ARGOS<small>Robot de service</small></div>
+  <div id="connexion" class="badge">Déconnecté</div>
+</header>
+
+<main>
+  <!-- Colonne gauche : la carte -->
+  <section class="carte">
+    <h2>Carte <span id="info-selection">Cliquez sur la carte pour choisir un emplacement</span></h2>
+    <div id="zone-carte">
+      <canvas id="canvas-carte"></canvas>
+      <div id="message-carte">En attente de la carte…</div>
+    </div>
+    <div class="legende">
+      <span><i style="background:var(--robot)"></i>Robot</span>
+      <span><i style="background:var(--accent);border-radius:2px"></i>Base</span>
+      <span><i style="background:var(--point)"></i>Point</span>
+      <span><i style="background:var(--ok)"></i>Patrouille (ordre)</span>
+      <span><i style="background:var(--select)"></i>Emplacement choisi</span>
+    </div>
+  </section>
+
+  <!-- Colonne droite : commandes -->
+  <div class="colonne">
+    <section class="carte commande">
+      <h2>Mode</h2>
+      <div class="etat">
+        <div id="pastille-etat" class="pastille">—</div>
+        <div id="detail-etat">En attente du répartiteur…</div>
+      </div>
+      <div class="rangee">
+        <button id="btn-patrouille" class="principal">Lancer la patrouille</button>
+        <button id="btn-base" class="principal" title="Ajoutez un point nommé « base » pour l'activer">Retour à la base</button>
+      </div>
+      <div class="rangee" style="margin-top:8px">
+        <button id="btn-veille" class="danger">Arrêt (veille)</button>
+      </div>
+    </section>
+
+    <section class="carte commande">
+      <h2>Points <span id="ordre-patrouille"></span></h2>
+      <ul id="liste-points" class="points"></ul>
+      <input id="nom-point" type="text" placeholder="Nom du nouveau point (ex. chambre_101)"
+             autocomplete="off" spellcheck="false">
+      <div id="aide-nom" class="aide">Minuscules, chiffres et « _ » uniquement.</div>
+      <div class="rangee">
+        <button id="btn-ajout-robot">À la position du robot</button>
+        <button id="btn-ajout-clic" disabled>À l'emplacement choisi</button>
+      </div>
+    </section>
+
+    <section class="carte commande">
+      <h2>Réglages</h2>
+      <div class="aide" style="margin-top:0">Marge de sécurité autour des obstacles
+        (<code>inflation_radius</code>). Minimum 0,22 m : le rayon du robot.</div>
+      <div class="reglage">
+        <input id="curseur-marge" type="range" min="0.22" max="0.70" step="0.01" value="0.25">
+        <span id="valeur-marge" class="valeur">0,25 m</span>
+      </div>
+      <div class="rangee" style="margin-top:12px">
+        <button id="btn-marge">Appliquer</button>
+      </div>
+    </section>
+
+    <section class="carte">
+      <h2>Journal</h2>
+      <ul id="journal"></ul>
+    </section>
+  </div>
+</main>
+
+<!-- roslib.js 1.4.1 (RobotWebTools, licence BSD) : copie locale, la page marche sans Internet. -->
+<script src="roslib.min.js"></script>
+<script>
+"use strict";
+
+// ===== Configuration =========================================================
+// rosbridge tourne sur la même machine que le serveur de la page, port 9090.
+const URL_ROSBRIDGE = `ws://${location.hostname || "localhost"}:9090`;
+const RAYON_ROBOT = 0.22;            // mètres (robot_radius dans nav2_params.yaml)
+const FORMAT_NOM = /^[a-z0-9_]+$/;   // même règle que le répartiteur
+const NOEUDS_COSTMAP = ["/global_costmap/global_costmap", "/local_costmap/local_costmap"];
+
+// ===== État de la page =======================================================
+let ros = null;                 // connexion rosbridge
+let topicCommande = null;       // /argos/commande
+let carte = null;               // dernier message /map
+let imageCarte = null;          // la carte dessinée une fois, réutilisée à chaque image
+let points = {};                // { nom: {x, y, theta} }
+let patrouille = [];            // [ nom, ... ]
+let etat = { mode: null, cible: null };
+let selection = null;           // emplacement cliqué sur la carte {x, y}
+let robot = null;               // position du robot sur la carte {x, y, t}
+let carteVersOdom = null;       // pour lisser la position (voir recevoirOdom)
+let odomActuelle = null;
+
+const $ = (id) => document.getElementById(id);
+const canvas = $("canvas-carte");
+const ctx = canvas.getContext("2d");
+
+// ===== Connexion à rosbridge (reconnexion automatique) =======================
+function connecter() {
+  ros = new ROSLIB.Ros({ url: URL_ROSBRIDGE });
+
+  ros.on("connection", () => {
+    document.body.classList.remove("deconnecte");
+    $("connexion").textContent = "Connecté";
+    $("connexion").classList.add("ok");
+    journal("Connecté au robot.");
+    abonner();
+    lireMarge();
+  });
+  ros.on("close", () => {
+    document.body.classList.add("deconnecte");
+    $("connexion").textContent = "Déconnecté";
+    $("connexion").classList.remove("ok");
+    setTimeout(connecter, 3000);   // nouvel essai dans 3 s
+  });
+  ros.on("error", () => {});       // « close » suit toujours une erreur
+}
+
+function abonner() {
+  topicCommande = new ROSLIB.Topic({
+    ros, name: "/argos/commande", messageType: "std_msgs/msg/String",
+  });
+
+  new ROSLIB.Topic({ ros, name: "/argos/etat", messageType: "std_msgs/msg/String" })
+    .subscribe((msg) => recevoirEtat(msg.data));
+
+  new ROSLIB.Topic({ ros, name: "/argos/points", messageType: "std_msgs/msg/String" })
+    .subscribe((msg) => recevoirPoints(JSON.parse(msg.data)));
+
+  new ROSLIB.Topic({ ros, name: "/map", messageType: "nav_msgs/msg/OccupancyGrid" })
+    .subscribe(recevoirCarte);
+
+  new ROSLIB.Topic({
+    ros, name: "/amcl_pose", messageType: "geometry_msgs/msg/PoseWithCovarianceStamped",
+  }).subscribe(recevoirAmcl);
+
+  // L'odométrie arrive très souvent : on la limite à 10 messages/s (throttle_rate en ms).
+  new ROSLIB.Topic({
+    ros, name: "/odom", messageType: "nav_msgs/msg/Odometry", throttle_rate: 100,
+  }).subscribe(recevoirOdom);
+}
+
+// Envoie une commande texte au répartiteur.
+function envoyer(texte) {
+  if (!topicCommande) return;
+  topicCommande.publish({ data: texte });
+  journal(`→ ${texte}`);
+}
+
+// ===== Réception des messages ================================================
+function recevoirEtat(texte) {
+  const [mode, c] = texte.split(" ");
+  const cible = c || null;
+  if (mode !== etat.mode || cible !== etat.cible) journal(`État : ${texte}`);
+  etat = { mode, cible };
+
+  const pastille = $("pastille-etat");
+  pastille.textContent = mode;
+  pastille.className = `pastille ${mode}`;
+  const details = {
+    VEILLE: "Au repos, en attente d'une commande.",
+    APPEL: `En route vers ${cible}.`,
+    PATROUILLE: `Patrouille — en route vers ${cible}.`,
+    ECHEC: `Échec vers ${cible}. Le robot attend une commande.`,
+  };
+  $("detail-etat").textContent = details[mode] || texte;
+  dessiner();
+}
+
+function recevoirPoints(donnees) {
+  points = donnees.points || {};
+  patrouille = donnees.patrouille || [];
+  afficherPoints();
+  dessiner();
+}
+
+function recevoirCarte(msg) {
+  carte = msg;
+  imageCarte = null;   // à redessiner avec la nouvelle carte
+  $("message-carte").style.display = "none";
+  dessiner();
+}
+
+// Angle de rotation autour de z (« lacet ») à partir d'un quaternion.
+function lacet(q) {
+  return Math.atan2(2 * (q.w * q.z + q.x * q.y), 1 - 2 * (q.y * q.y + q.z * q.z));
+}
+
+// Opérations sur les poses 2D {x, y, t} : composer = enchaîner deux déplacements.
+function composer(a, b) {
+  const c = Math.cos(a.t), s = Math.sin(a.t);
+  return { x: a.x + c * b.x - s * b.y, y: a.y + s * b.x + c * b.y, t: a.t + b.t };
+}
+function inverser(p) {
+  const c = Math.cos(p.t), s = Math.sin(p.t);
+  return { x: -(c * p.x + s * p.y), y: -(-s * p.x + c * p.y), t: -p.t };
+}
+
+// AMCL ne publie sa position qu'après un déplacement notable (~25 cm) : le robot
+// avancerait par sauts. On mémorise donc l'écart carte → odométrie à chaque
+// position AMCL, puis on suit l'odométrie (fluide) entre deux mises à jour.
+function recevoirAmcl(msg) {
+  const p = msg.pose.pose;
+  const poseCarte = { x: p.position.x, y: p.position.y, t: lacet(p.orientation) };
+  robot = poseCarte;
+  carteVersOdom = odomActuelle ? composer(poseCarte, inverser(odomActuelle)) : null;
+  majBoutonsAjout();
+  dessiner();
+}
+
+function recevoirOdom(msg) {
+  const p = msg.pose.pose;
+  odomActuelle = { x: p.position.x, y: p.position.y, t: lacet(p.orientation) };
+  if (carteVersOdom) {
+    robot = composer(carteVersOdom, odomActuelle);
+    dessiner();
+  }
+}
+
+// ===== Dessin de la carte ====================================================
+function couleur(nom) {
+  return getComputedStyle(document.documentElement).getPropertyValue(nom).trim();
+}
+function rgb(hex) {
+  const n = parseInt(hex.slice(1), 16);
+  return [(n >> 16) & 255, (n >> 8) & 255, n & 255];
+}
+
+// Construit l'image de la carte une seule fois (une cellule = un pixel).
+// Dans le message, la ligne 0 est en BAS de la carte : on inverse les lignes.
+function construireImage() {
+  const { width: l, height: h } = carte.info;
+  const image = document.createElement("canvas");
+  image.width = l; image.height = h;
+  const ic = image.getContext("2d");
+  const pixels = ic.createImageData(l, h);
+  const libre = rgb(couleur("--map-free")), occupe = rgb(couleur("--map-occ"));
+  const inconnu = rgb(couleur("--map-unknown"));
+  for (let ligne = 0; ligne < h; ligne++) {
+    for (let col = 0; col < l; col++) {
+      const v = carte.data[ligne * l + col];   // -1 inconnu, 0 libre … 100 occupé
+      const c = v < 0 ? inconnu : v >= 50 ? occupe : libre;
+      const i = ((h - 1 - ligne) * l + col) * 4;
+      pixels.data[i] = c[0]; pixels.data[i + 1] = c[1]; pixels.data[i + 2] = c[2];
+      pixels.data[i + 3] = 255;
+    }
+  }
+  ic.putImageData(pixels, 0, 0);
+  return image;
+}
+
+// Placement de la carte dans le canvas : centrée, à la plus grande taille possible.
+function vue() {
+  const { width: l, height: h, resolution: r, origin } = carte.info;
+  const echelle = Math.min(canvas.width / l, canvas.height / h);   // pixels par cellule
+  return {
+    echelle, r, ox: origin.position.x, oy: origin.position.y, h,
+    dx: (canvas.width - l * echelle) / 2, dy: (canvas.height - h * echelle) / 2,
+  };
+}
+// Mètres (repère carte) → pixels du canvas, et l'inverse.
+function versEcran(v, x, y) {
+  return [v.dx + ((x - v.ox) / v.r) * v.echelle, v.dy + (v.h - (y - v.oy) / v.r) * v.echelle];
+}
+function versCarte(v, px, py) {
+  return [v.ox + ((px - v.dx) / v.echelle) * v.r, v.oy + (v.h - (py - v.dy) / v.echelle) * v.r];
+}
+
+let dessinPrevu = false;
+function dessiner() {
+  // Regroupe les demandes de dessin : au plus une image par rafraîchissement d'écran.
+  if (dessinPrevu) return;
+  dessinPrevu = true;
+  requestAnimationFrame(() => { dessinPrevu = false; dessinerMaintenant(); });
+}
+
+function dessinerMaintenant() {
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  if (!carte) return;
+  if (!imageCarte) imageCarte = construireImage();
+  const v = vue();
+  const dpr = window.devicePixelRatio || 1;
+
+  ctx.imageSmoothingEnabled = false;   // garder des cellules nettes
+  ctx.drawImage(imageCarte, v.dx, v.dy, carte.info.width * v.echelle, carte.info.height * v.echelle);
+
+  // Points nommés (vert + numéro s'ils font partie de la patrouille).
+  ctx.font = `${600} ${12 * dpr}px system-ui, sans-serif`;
+  for (const [nom, p] of Object.entries(points)) {
+    const [x, y] = versEcran(v, p.x, p.y);
+    const ordre = patrouille.indexOf(nom);
+    const cible = nom === etat.cible;
+    const taille = (cible ? 9 : 7) * dpr;
+    ctx.beginPath();
+    // La base est un carré, les autres points des disques.
+    if (nom === "base") ctx.rect(x - taille, y - taille, 2 * taille, 2 * taille);
+    else ctx.arc(x, y, taille, 0, 2 * Math.PI);
+    ctx.fillStyle = nom === "base" ? couleur("--accent")
+      : ordre >= 0 ? couleur("--ok") : couleur("--point");
+    ctx.fill();
+    if (cible) { ctx.lineWidth = 3 * dpr; ctx.strokeStyle = couleur("--warn"); ctx.stroke(); }
+    ctx.fillStyle = couleur("--text");
+    ctx.fillText(ordre >= 0 ? `${ordre + 1}. ${nom}` : nom, x + 11 * dpr, y + 4 * dpr);
+  }
+
+  // Emplacement choisi : une croix.
+  if (selection) {
+    const [x, y] = versEcran(v, selection.x, selection.y);
+    ctx.strokeStyle = couleur("--select"); ctx.lineWidth = 2.5 * dpr;
+    const t = 7 * dpr;
+    ctx.beginPath();
+    ctx.moveTo(x - t, y - t); ctx.lineTo(x + t, y + t);
+    ctx.moveTo(x + t, y - t); ctx.lineTo(x - t, y + t);
+    ctx.stroke();
+  }
+
+  // Robot : un disque à sa vraie taille, avec un trait dans le sens de la marche.
+  if (robot) {
+    const [x, y] = versEcran(v, robot.x, robot.y);
+    const rayon = Math.max((RAYON_ROBOT / v.r) * v.echelle, 6 * dpr);
+    ctx.beginPath();
+    ctx.arc(x, y, rayon, 0, 2 * Math.PI);
+    ctx.fillStyle = couleur("--robot"); ctx.globalAlpha = 0.85; ctx.fill(); ctx.globalAlpha = 1;
+    ctx.beginPath();
+    ctx.moveTo(x, y);
+    ctx.lineTo(x + Math.cos(robot.t) * rayon * 1.6, y - Math.sin(robot.t) * rayon * 1.6);
+    ctx.strokeStyle = couleur("--robot"); ctx.lineWidth = 3 * dpr; ctx.stroke();
+  }
+}
+
+// Le canvas suit la taille de son cadre (et la densité de pixels de l'écran).
+new ResizeObserver(() => {
+  const dpr = window.devicePixelRatio || 1;
+  canvas.width = canvas.clientWidth * dpr;
+  canvas.height = canvas.clientHeight * dpr;
+  dessiner();
+}).observe(canvas);
+
+// Thème clair/sombre changé : les couleurs de la carte changent aussi.
+matchMedia("(prefers-color-scheme: dark)").addEventListener("change", () => {
+  imageCarte = null; dessiner();
+});
+
+// Clic sur la carte : on retient l'emplacement (en mètres).
+canvas.addEventListener("click", (e) => {
+  if (!carte) return;
+  const dpr = window.devicePixelRatio || 1;
+  const rect = canvas.getBoundingClientRect();
+  const [x, y] = versCarte(vue(), (e.clientX - rect.left) * dpr, (e.clientY - rect.top) * dpr);
+  const i = carte.info, xmax = i.origin.position.x + i.width * i.resolution;
+  const ymax = i.origin.position.y + i.height * i.resolution;
+  if (x < i.origin.position.x || x > xmax || y < i.origin.position.y || y > ymax) return;
+  selection = { x: Math.round(x * 100) / 100, y: Math.round(y * 100) / 100 };
+  $("info-selection").textContent = `Emplacement choisi : x ${selection.x} · y ${selection.y}`;
+  majBoutonsAjout();
+  dessiner();
+});
+
+// ===== Liste des points ======================================================
+function afficherPoints() {
+  const liste = $("liste-points");
+  liste.replaceChildren();
+  const noms = Object.keys(points);
+  if (noms.length === 0) {
+    liste.innerHTML = '<li class="vide">Aucun point. Ajoutez-en un ci-dessous.</li>';
+  }
+  for (const nom of noms) {
+    const p = points[nom];
+    const li = document.createElement("li");
+
+    const infos = document.createElement("div");
+    infos.className = "infos";
+    const titre = document.createElement("div");
+    titre.className = "nom"; titre.textContent = nom;
+    const coord = document.createElement("div");
+    coord.className = "coord";
+    coord.textContent = `x ${p.x} · y ${p.y} · θ ${p.theta}`;
+    infos.append(titre, coord);
+
+    // Case « patrouille » : ajoute le point à la fin de la boucle, ou l'en retire.
+    const label = document.createElement("label");
+    const caseP = document.createElement("input");
+    caseP.type = "checkbox"; caseP.checked = patrouille.includes(nom);
+    caseP.addEventListener("change", () => {
+      const nouvelle = caseP.checked ? [...patrouille, nom] : patrouille.filter((n) => n !== nom);
+      envoyer(`definir_patrouille ${nouvelle.join(" ")}`.trim());
+    });
+    label.append(caseP, "Patrouille");
+
+    const appeler = document.createElement("button");
+    appeler.className = "petit principal"; appeler.textContent = "Appeler";
+    appeler.addEventListener("click", () => envoyer(`appel ${nom}`));
+
+    const supprimer = document.createElement("button");
+    supprimer.className = "icone"; supprimer.textContent = "✕"; supprimer.title = "Supprimer";
+    supprimer.addEventListener("click", () => {
+      if (confirm(`Supprimer le point « ${nom} » ?`)) envoyer(`supprimer ${nom}`);
+    });
+
+    li.append(infos, label, appeler, supprimer);
+    liste.append(li);
+  }
+  $("ordre-patrouille").textContent = patrouille.length ? patrouille.join(" → ") : "";
+  $("btn-patrouille").disabled = patrouille.length === 0;
+  $("btn-base").disabled = !("base" in points);
+}
+
+// Nom du nouveau point : validé ici avant envoi (le répartiteur revérifie).
+function nomValide() {
+  const nom = $("nom-point").value.trim();
+  const ok = FORMAT_NOM.test(nom);
+  $("aide-nom").classList.toggle("erreur", nom !== "" && !ok);
+  return ok ? nom : null;
+}
+function majBoutonsAjout() {
+  const nom = nomValide();
+  $("btn-ajout-robot").disabled = !nom || !robot;
+  $("btn-ajout-clic").disabled = !nom || !selection;
+}
+$("nom-point").addEventListener("input", (e) => {
+  e.target.value = e.target.value.toLowerCase().replace(/[\s-]/g, "_");
+  majBoutonsAjout();
+});
+$("btn-ajout-robot").addEventListener("click", () => {
+  envoyer(`ajouter ${nomValide()}`);
+  $("nom-point").value = ""; majBoutonsAjout();
+});
+$("btn-ajout-clic").addEventListener("click", () => {
+  envoyer(`ajouter ${nomValide()} ${selection.x} ${selection.y}`);
+  $("nom-point").value = ""; majBoutonsAjout();
+});
+
+// ===== Boutons de mode =======================================================
+$("btn-patrouille").addEventListener("click", () => envoyer("patrouille"));
+$("btn-base").addEventListener("click", () => envoyer("base"));
+$("btn-veille").addEventListener("click", () => envoyer("veille"));
+
+// ===== Réglage de la marge (paramètre Nav2 modifié en direct) ================
+const PARAM_MARGE = "inflation_layer.inflation_radius";
+const formatMetres = (v) => `${Number(v).toFixed(2).replace(".", ",")} m`;
+$("curseur-marge").addEventListener("input", (e) => {
+  $("valeur-marge").textContent = formatMetres(e.target.value);
+});
+
+// Lit la valeur actuelle (service standard « get_parameters » de chaque nœud ROS 2).
+function lireMarge() {
+  new ROSLIB.Service({
+    ros, name: `${NOEUDS_COSTMAP[0]}/get_parameters`,
+    serviceType: "rcl_interfaces/srv/GetParameters",
+  }).callService({ names: [PARAM_MARGE] }, (rep) => {
+    const v = rep.values && rep.values[0] && rep.values[0].double_value;
+    if (v) { $("curseur-marge").value = v; $("valeur-marge").textContent = formatMetres(v); }
+  }, () => journal("Marge : Nav2 pas encore démarré.", true));
+}
+
+// Applique la valeur aux deux cartes de coûts (globale et locale).
+$("btn-marge").addEventListener("click", () => {
+  const v = Math.max(RAYON_ROBOT, parseFloat($("curseur-marge").value));
+  for (const noeud of NOEUDS_COSTMAP) {
+    new ROSLIB.Service({
+      ros, name: `${noeud}/set_parameters`, serviceType: "rcl_interfaces/srv/SetParameters",
+    }).callService(
+      // type 3 = nombre décimal (rcl_interfaces/msg/ParameterType.PARAMETER_DOUBLE)
+      { parameters: [{ name: PARAM_MARGE, value: { type: 3, double_value: v } }] },
+      (rep) => {
+        const r = rep.results && rep.results[0];
+        if (r && r.successful) journal(`Marge ${formatMetres(v)} appliquée (${noeud.split("/")[1]}).`);
+        else journal(`Marge refusée (${noeud}) : ${r ? r.reason : "?"}`, true);
+      },
+      (err) => journal(`Marge : échec (${err}).`, true));
+  }
+});
+
+// ===== Journal ===============================================================
+function journal(texte, erreur = false) {
+  const li = document.createElement("li");
+  const heure = document.createElement("time");
+  heure.textContent = new Date().toLocaleTimeString("fr-CA");
+  const span = document.createElement("span");
+  span.textContent = texte;
+  if (erreur) span.className = "erreur";
+  li.append(heure, span);
+  $("journal").prepend(li);
+  while ($("journal").children.length > 30) $("journal").lastChild.remove();
+}
+
+afficherPoints();
+connecter();
+</script>
+</body>
+</html>

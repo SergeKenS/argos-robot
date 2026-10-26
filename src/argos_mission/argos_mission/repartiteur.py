@@ -6,18 +6,28 @@ Modes (un seul actif à la fois) :
   PATROUILLE : enchaîne en boucle les points de la liste « patrouille »
 Plus un état de repos ECHEC : un appel a échoué, le robot attend une commande.
 
-Commandes (texte sur /argos/commande) : « veille », « appel <point> », « patrouille »
+Commandes (texte sur /argos/commande) :
+  « veille », « appel <point> », « patrouille », « base » (= « appel base »)
+  « ajouter <nom> »            : enregistre la position actuelle du robot
+  « ajouter <nom> <x> <y> »    : enregistre un point choisi sur la carte
+  « supprimer <nom> »
+  « definir_patrouille <nom> <nom>... » : ordre de patrouille (vide = aucune)
 État publié sur /argos/etat : « VEILLE », « APPEL alpha », « PATROUILLE beta »...
+Points publiés sur /argos/points (JSON) à chaque modification.
 
 Usage :
   ros2 run argos_mission repartiteur --ros-args -p fichier_points:=<chemin du YAML>
 """
+import json
+import math
 import os
+import re
 import sys
 
 import rclpy
 import yaml
 from ament_index_python.packages import get_package_share_directory
+from geometry_msgs.msg import PoseWithCovarianceStamped
 from nav2_simple_commander.robot_navigator import BasicNavigator, TaskResult
 from rclpy.qos import DurabilityPolicy, QoSProfile, ReliabilityPolicy
 from rclpy.signals import SignalHandlerOptions
@@ -32,6 +42,16 @@ ARBRE_NAVIGATION = os.path.join(
     get_package_share_directory('nav2_bt_navigator'), 'behavior_trees',
     'navigate_w_recovery_and_replanning_only_if_path_becomes_invalid.xml')
 
+# Noms de points autorisés : minuscules, chiffres et « _ » (ex. chambre_101).
+FORMAT_NOM = re.compile(r'^[a-z0-9_]+$')
+
+# En-tête réécrit à chaque sauvegarde du fichier de points.
+EN_TETE_POINTS = """\
+# Points nommés d'une carte (un fichier par carte).
+#   x, y  : position en mètres dans le repère de la carte ; theta : orientation (radians)
+# Fichier réécrit par le répartiteur quand on ajoute/supprime un point (page web).
+"""
+
 
 class Repartiteur(BasicNavigator):
     """Nœud unique : hérite de BasicNavigator pour envoyer les missions à Nav2.
@@ -45,11 +65,11 @@ class Repartiteur(BasicNavigator):
         super().__init__(node_name='repartiteur')
 
         # Chemin du fichier de points, passé au lancement (un fichier par carte).
-        chemin = self.declare_parameter('fichier_points', '').value
-        with open(chemin) as fichier:
+        self.chemin_points = self.declare_parameter('fichier_points', '').value
+        with open(self.chemin_points) as fichier:
             contenu = yaml.safe_load(fichier)
         self.points = contenu['points']
-        self.patrouille = contenu.get('patrouille', [])
+        self.patrouille = contenu.get('patrouille') or []
         for nom in self.patrouille:
             if nom not in self.points:
                 raise ValueError(f'Point de patrouille inconnu : {nom}')
@@ -59,16 +79,22 @@ class Repartiteur(BasicNavigator):
         self.index_patrouille = 0      # position dans la liste de patrouille
         self.echecs_consecutifs = 0    # pour détecter une patrouille impossible
         self.commande_en_attente = None
+        self.pose_robot = None         # dernière position estimée par AMCL
 
-        # « TRANSIENT_LOCAL » : le dernier état reste disponible, même pour un
+        # « TRANSIENT_LOCAL » : le dernier message reste disponible, même pour un
         # abonné qui arrive plus tard (ex. la page web ouverte après coup).
-        qos_etat = QoSProfile(depth=1,
-                              reliability=ReliabilityPolicy.RELIABLE,
-                              durability=DurabilityPolicy.TRANSIENT_LOCAL)
-        self.pub_etat = self.create_publisher(String, '/argos/etat', qos_etat)
+        qos_dernier = QoSProfile(depth=1,
+                                 reliability=ReliabilityPolicy.RELIABLE,
+                                 durability=DurabilityPolicy.TRANSIENT_LOCAL)
+        self.pub_etat = self.create_publisher(String, '/argos/etat', qos_dernier)
+        self.pub_points = self.create_publisher(String, '/argos/points', qos_dernier)
         self.create_subscription(String, '/argos/commande', self.recevoir_commande, 10)
+        # AMCL publie sa position avec la même QoS (voir robot_navigator.py).
+        self.create_subscription(PoseWithCovarianceStamped, 'amcl_pose',
+                                 self.recevoir_pose, qos_dernier)
 
         self.publier_etat()
+        self.publier_points()
         self.get_logger().info(f'Prêt. Points : {", ".join(self.points)}')
 
     # --- Réception et publication -------------------------------------------
@@ -76,6 +102,14 @@ class Repartiteur(BasicNavigator):
     def recevoir_commande(self, msg):
         """Appelée par ROS à chaque message : on note seulement la commande."""
         self.commande_en_attente = msg.data
+
+    def recevoir_pose(self, msg):
+        """Mémorise la dernière position du robot (pour « ajouter <nom> »)."""
+        self.pose_robot = msg.pose.pose
+
+    def publier_points(self):
+        donnees = {'points': self.points, 'patrouille': self.patrouille}
+        self.pub_points.publish(String(data=json.dumps(donnees)))
 
     def publier_etat(self):
         texte = self.mode if self.cible is None else f'{self.mode} {self.cible}'
@@ -108,6 +142,9 @@ class Repartiteur(BasicNavigator):
         if not mots:
             return
         action = mots[0]
+        if action == 'base':
+            # Raccourci : « base » = « appel base » (le point de base s'appelle « base »).
+            action, mots = 'appel', ['appel', 'base']
 
         if action == 'veille':
             self.annuler_mission()
@@ -128,6 +165,12 @@ class Repartiteur(BasicNavigator):
             self.index_patrouille = 0
             self.echecs_consecutifs = 0
             self.lancer_vers(self.patrouille[0])
+        elif action == 'ajouter' and len(mots) in (2, 4):
+            self.ajouter_point(mots[1], mots[2:])
+        elif action == 'supprimer' and len(mots) == 2:
+            self.supprimer_point(mots[1])
+        elif action == 'definir_patrouille':
+            self.definir_patrouille(mots[1:])
         else:
             self.get_logger().warn(f'Commande inconnue : « {texte} »')
 
@@ -179,6 +222,76 @@ class Repartiteur(BasicNavigator):
         self.mode = mode
         self.cible = None
         self.publier_etat()
+
+    # --- Gestion des points (page web) ------------------------------------------
+
+    def ajouter_point(self, nom, coordonnees):
+        """Ajoute (ou remplace) un point : position du robot, ou x y donnés."""
+        if not FORMAT_NOM.match(nom):
+            self.get_logger().warn(f'Nom invalide : {nom} (minuscules, chiffres, _)')
+            return
+        if coordonnees:
+            # Point choisi sur la carte : orientation 0 par défaut.
+            try:
+                x, y = (float(valeur) for valeur in coordonnees)
+            except ValueError:
+                self.get_logger().warn(f'Coordonnées invalides : {coordonnees}')
+                return
+            theta = 0.0
+        else:
+            # Position actuelle du robot, telle qu'estimée par AMCL.
+            if self.pose_robot is None:
+                self.get_logger().warn('Position du robot inconnue : faire « 2D Pose Estimate »')
+                return
+            x = self.pose_robot.position.x
+            y = self.pose_robot.position.y
+            # Inverse de creer_pose : quaternion (rotation autour de z) → angle.
+            q = self.pose_robot.orientation
+            theta = math.atan2(2 * q.w * q.z, 1 - 2 * q.z * q.z)
+
+        self.points[nom] = {'x': round(x, 2), 'y': round(y, 2), 'theta': round(theta, 2)}
+        self.enregistrer_points()
+        self.get_logger().info(f'Point {nom} enregistré : x={x:.2f} y={y:.2f}')
+
+    def supprimer_point(self, nom):
+        if nom not in self.points:
+            self.get_logger().warn(f'Point inconnu : {nom}')
+            return
+        del self.points[nom]
+        if nom in self.patrouille:
+            self.patrouille = [p for p in self.patrouille if p != nom]
+            self.verifier_patrouille()
+        self.enregistrer_points()
+        self.get_logger().info(f'Point {nom} supprimé.')
+
+    def definir_patrouille(self, noms):
+        inconnus = [nom for nom in noms if nom not in self.points]
+        if inconnus:
+            self.get_logger().warn(f'Points inconnus : {", ".join(inconnus)}')
+            return
+        self.patrouille = noms
+        self.verifier_patrouille()
+        self.enregistrer_points()
+        self.get_logger().info(f'Patrouille : {" → ".join(noms) or "aucune"}')
+
+    def verifier_patrouille(self):
+        """Si la patrouille en cours se retrouve vide, on s'arrête proprement."""
+        if self.mode == 'PATROUILLE' and not self.patrouille:
+            self.annuler_mission()
+            self.passer_au_repos('VEILLE')
+
+    def enregistrer_points(self):
+        """Réécrit le fichier de points, puis informe la page web."""
+        contenu = {'points': self.points, 'patrouille': self.patrouille}
+        try:
+            with open(self.chemin_points, 'w') as fichier:
+                fichier.write(EN_TETE_POINTS)
+                # default_flow_style=None : chaque point tient sur une ligne {x, y, theta}.
+                yaml.safe_dump(contenu, fichier, default_flow_style=None,
+                               sort_keys=False, allow_unicode=True)
+        except OSError as erreur:
+            self.get_logger().error(f"Impossible d'écrire {self.chemin_points} : {erreur}")
+        self.publier_points()
 
 
 def main():

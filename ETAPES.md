@@ -120,3 +120,32 @@ Mesurer sur le Pi : `ros2 topic hz /cmd_vel_nav`, `htop`, `vcgencmd measure_temp
   RPP suit le chemin tracé, calcule beaucoup moins (bon pour le Pi), mais contourne
   moins bien un obstacle imprévu. Changement : un bloc dans `config/nav2_params.yaml`.
   À appliquer seulement si le besoin se confirme.
+
+## Étape 6 — Page web (non testée)
+
+Paquet `argos_web` (dans `src/`) :
+- `web/index.html` : la page (carte, mode, points, réglages, journal)
+- `web/roslib.min.js` : bibliothèque roslib.js 1.4.1 (copie locale, marche sans Internet)
+- `launch/argos_web.launch.py` : démarre rosbridge (port 9090) + serveur HTTP (port 8080)
+
+Le répartiteur publie aussi `/argos/points` et accepte : `base`, `ajouter <nom>`,
+`ajouter <nom> <x> <y>`, `supprimer <nom>`, `definir_patrouille <nom>...`.
+Point **`base`** = point de retour (bouton « Retour à la base »).
+
+Installer et compiler (une fois, après `git pull`) :
+```
+cd ~/Documents/Projet/argos_ws
+rosdep install --from-paths src --ignore-src -y
+colcon build --symlink-install
+source install/setup.bash
+```
+Lancer : simulation (terminal 1) + répartiteur (terminal 2) comme à l'étape 5, puis
+terminal 3 :
+```
+ros2 launch argos_web argos_web.launch.py
+```
+Ouvrir **http://localhost:8080** (depuis un téléphone sur le même réseau :
+`http://<adresse IP du PC>:8080`).
+
+⚠ Aucune protection : toute personne sur le réseau peut piloter le robot. À traiter
+avant un usage réel.

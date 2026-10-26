@@ -2,9 +2,12 @@
 # Un fichier de points par carte : les coordonnées n'ont de sens que sur leur carte.
 #   x, y  : position en mètres, dans le repère de la carte (frame « map »)
 #   theta : orientation du robot à l'arrivée, en radians (0 = vers +x)
-# Relevés avec RViz → Publish Point + « ros2 topic echo /clicked_point ».
+# « base » : point de retour (bouton « Retour à la base »). Ici, le point de départ
+# du robot pendant le SLAM, qui est l'origine de la carte.
+# Fichier réécrit par le répartiteur quand on modifie les points depuis la page web.
 
 points:
+  base:  {x: 0.0, y: 0.0, theta: 0.0}
   alpha: {x: 0.56, y: 2.08, theta: 0.0}
   beta:  {x: 2.56, y: 2.01, theta: 0.0}
   gamma: {x: 3.37, y: -1.08, theta: 0.0}
