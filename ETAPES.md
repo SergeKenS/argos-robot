@@ -121,7 +121,7 @@ Mesurer sur le Pi : `ros2 topic hz /cmd_vel_nav`, `htop`, `vcgencmd measure_temp
   moins bien un obstacle imprévu. Changement : un bloc dans `config/nav2_params.yaml`.
   À appliquer seulement si le besoin se confirme.
 
-## Étape 6 : Page web (non testée)
+## Étape 6 : Page web ✔
 
 Paquet `argos_web` (dans `src/`) :
 - `web/index.html` : la page (carte, mode, points, réglages, journal)
@@ -132,7 +132,12 @@ Le répartiteur publie aussi `/argos/points` et accepte : `base`, `ajouter <nom>
 `ajouter <nom> <x> <y>`, `supprimer <nom>`, `definir_patrouille <nom>...`.
 Point **`base`** = point de retour (bouton « Retour à la base »).
 
-Installer et compiler (une fois, après `git pull`) :
+Première fois seulement (sinon rosdep n'installe rien, en silence) :
+```
+sudo rosdep init
+rosdep update
+```
+Installer et compiler (après chaque `git pull`) :
 ```
 cd ~/Documents/Projet/argos_ws
 rosdep install --from-paths src --ignore-src -y
