@@ -79,15 +79,24 @@ def arreter(noeud):
     return localisation(noeud, ManageLifecycleNodes.Request.STARTUP) and slam_arrete
 
 
-def sauvegarder(chemin_sans_extension):
+def sauvegarder(noeud, chemin_sans_extension):
     """Enregistre la carte publiée sur /map : crée <chemin>.pgm et <chemin>.yaml.
 
     Même outil qu'à l'étape 2 (map_saver_cli de Nav2), lancé comme une commande.
+    Son délai d'attente de la carte est de 2 s par défaut : trop court quand tout
+    le robot tourne (le nouveau programme met du temps à « trouver » les autres).
+    On le porte à 10 s.
     """
+    commande = ['ros2', 'run', 'nav2_map_server', 'map_saver_cli', '-f', chemin_sans_extension,
+                '--ros-args', '-p', 'save_map_timeout:=10.0']
     try:
-        resultat = subprocess.run(
-            ['ros2', 'run', 'nav2_map_server', 'map_saver_cli', '-f', chemin_sans_extension],
-            capture_output=True, text=True, timeout=60)
+        resultat = subprocess.run(commande, capture_output=True, text=True, timeout=60)
     except subprocess.TimeoutExpired:
+        noeud.get_logger().error('map_saver_cli : pas de réponse après 60 s')
         return False
-    return resultat.returncode == 0
+    if resultat.returncode != 0:
+        # Dernières lignes affichées par map_saver_cli, pour comprendre l'échec.
+        lignes = (resultat.stdout + resultat.stderr).strip().splitlines()[-5:]
+        noeud.get_logger().error('map_saver_cli : ' + ' | '.join(lignes))
+        return False
+    return True

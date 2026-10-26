@@ -314,7 +314,7 @@ class Repartiteur(BasicNavigator):
         if os.path.exists(fichier + '.yaml'):
             self.get_logger().warn(f'La carte {nom} existe déjà : choisir un autre nom.')
             return
-        if not cartographie.sauvegarder(fichier):
+        if not cartographie.sauvegarder(self, fichier):
             # On reste en cartographie : rien n'est perdu, on peut réessayer.
             self.get_logger().error(f'Échec de la sauvegarde de {fichier}.')
             return
