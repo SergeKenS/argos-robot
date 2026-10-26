@@ -69,3 +69,32 @@ Lancer (simulation de l'étape 3 démarrée, 2D Pose Estimate fait) :
 ```
 ros2 run argos_mission aller_a alpha
 ```
+
+## Étape 5 — Répartiteur à 3 modes ✔
+
+- `maps/arene_points.yaml` : points + ordre de patrouille (un fichier par carte)
+- `argos_mission/repartiteur.py` : machine à états VEILLE / APPEL / PATROUILLE
+  (+ état ECHEC). Ne recalcule le chemin que s'il devient bloqué.
+- `config/nav2_params.yaml` : copie des paramètres Nav2, marge d'obstacle
+  `inflation_radius` 0.70 → **0.25** (jamais sous 0.22, le rayon du robot)
+
+Terminal 1 — simulation avec nos paramètres :
+```
+ros2 launch nav2_bringup tb3_simulation_launch.py headless:=False map:=$HOME/Documents/Projet/argos_ws/maps/arene.yaml params_file:=$HOME/Documents/Projet/argos_ws/src/argos_mission/config/nav2_params.yaml
+```
+Terminal 2 — répartiteur :
+```
+ros2 run argos_mission repartiteur --ros-args -p fichier_points:=$HOME/Documents/Projet/argos_ws/maps/arene_points.yaml
+```
+Terminal 3 — commandes (`appel <point>`, `patrouille`, `veille`) :
+```
+ros2 topic pub --once /argos/commande std_msgs/String "data: 'appel beta'"
+```
+
+Régler la marge en direct (sans relancer) :
+```
+ros2 param set /global_costmap/global_costmap inflation_layer.inflation_radius 0.25
+ros2 param set /local_costmap/local_costmap inflation_layer.inflation_radius 0.25
+```
+Robot qui tourne sur place = manœuvre de secours de Nav2 (compteur « Recoveries »
+dans RViz) : le contrôleur n'a pas trouvé comment avancer.

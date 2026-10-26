@@ -203,7 +203,7 @@ local_costmap:
       inflation_layer:
         plugin: "nav2_costmap_2d::InflationLayer"
         cost_scaling_factor: 3.0
-        inflation_radius: 0.42  # ARGOS : 0.70 par défaut ; 0.22 (rayon robot) + 0.20 de marge
+        inflation_radius: 0.25  # ARGOS : 0.70 par défaut ; réglé en direct (rayon robot 0.22 : ne pas descendre en dessous)
       voxel_layer:
         plugin: "nav2_costmap_2d::VoxelLayer"
         enabled: True
@@ -260,7 +260,7 @@ global_costmap:
       inflation_layer:
         plugin: "nav2_costmap_2d::InflationLayer"
         cost_scaling_factor: 3.0
-        inflation_radius: 0.42  # ARGOS : 0.7 par défaut ; 0.22 (rayon robot) + 0.20 de marge
+        inflation_radius: 0.25  # ARGOS : 0.7 par défaut ; réglé en direct (rayon robot 0.22 : ne pas descendre en dessous)
       always_send_full_costmap: True
 
 # The yaml_filename does not need to be specified since it going to be set by defaults in launch.
