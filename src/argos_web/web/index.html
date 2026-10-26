@@ -529,7 +529,9 @@ function dessinerMaintenant() {
 
   // Points nommés (vert + numéro s'ils font partie de la patrouille).
   ctx.font = `${600} ${12 * dpr}px system-ui, sans-serif`;
-  for (const [nom, p] of Object.entries(points)) {
+  // En cartographie, les points appartiennent à l'ancienne carte : on ne les montre pas.
+  const pointsVisibles = etat.mode === "CARTOGRAPHIE" ? {} : points;
+  for (const [nom, p] of Object.entries(pointsVisibles)) {
     const [x, y] = versEcran(v, p.x, p.y);
     const ordre = patrouille.indexOf(nom);
     const cible = nom === etat.cible;
