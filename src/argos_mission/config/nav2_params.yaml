@@ -191,7 +191,7 @@ local_costmap:
   local_costmap:
     ros__parameters:
       # ARGOS : 60 par défaut, voir global_costmap.
-      initial_transform_timeout: 3600.0
+      initial_transform_timeout: 300.0
       update_frequency: 5.0
       publish_frequency: 2.0
       global_frame: odom
@@ -229,8 +229,8 @@ global_costmap:
   global_costmap:
     ros__parameters:
       # ARGOS : 60 par défaut. Temps laissé pour placer le robot sur la carte au démarrage
-      # (sinon la navigation abandonne et il faut tout relancer). 3600 s = 1 h.
-      initial_transform_timeout: 3600.0
+      # (sinon la navigation abandonne et il faut tout relancer). 300 s = 5 min.
+      initial_transform_timeout: 300.0
       update_frequency: 1.0
       publish_frequency: 1.0
       global_frame: map

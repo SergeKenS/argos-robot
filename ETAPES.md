@@ -168,7 +168,7 @@ ros2 launch argos_mission argos.launch.py
 Options : `carte:=arene` (fichiers `maps/<carte>.yaml` et `maps/<carte>_points.yaml`),
 `rviz:=true` (RViz, outil de développement), `gazebo_gui:=false`.
 Placer le robot depuis la page web (bouton **Placer le robot sur la carte** : appuyer
-sur sa position, glisser vers où il regarde). Délai : 1 h (`initial_transform_timeout`, 60 s par défaut dans Nav2).
+sur sa position, glisser vers où il regarde). Délai : 5 min (`initial_transform_timeout`, 60 s par défaut dans Nav2).
 
 ## Page web : placer le robot ✔, changer de carte ✔
 
