@@ -120,6 +120,9 @@ Mesurer sur le Pi : `ros2 topic hz /cmd_vel_nav`, `htop`, `vcgencmd measure_temp
   RPP suit le chemin tracé, calcule beaucoup moins (bon pour le Pi), mais contourne
   moins bien un obstacle imprévu. Changement : un bloc dans `config/nav2_params.yaml`.
   À appliquer seulement si le besoin se confirme.
+- **Exploration automatique** : le robot cartographie seul les zones inconnues
+  (paquets du type `m-explore`, compatibilité Jazzy non vérifiée). Reportée : ajouter
+  des fonctions seulement quand le robot réel marche, pour garder le débogage simple.
 
 ## Étape 6 : Page web ✔
 
