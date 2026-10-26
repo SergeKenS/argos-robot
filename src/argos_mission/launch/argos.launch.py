@@ -6,6 +6,7 @@
 Contenu (repris des fichiers de lancement de nav2_bringup, branche jazzy, réduits) :
   1. Simulation : Gazebo + TurtleBot3 (à remplacer par les pilotes sur le vrai robot)
   2. Localisation : map_server + AMCL (localization_launch.py de Nav2, inclus tel quel)
+     + SLAM Toolbox à l'arrêt, démarré seulement pour créer une carte
   3. Navigation : seulement les serveurs utiles, tous dans un seul processus.
      Retirés par rapport à Nav2 : docking_server, route_server, waypoint_follower.
   4. Répartiteur (argos_mission) + page web (argos_web)
@@ -111,6 +112,13 @@ def generate_launch_description():
             'params_file': params, 'use_composition': 'True',
             'container_name': 'nav2_container',
         }.items())
+    # SLAM Toolbox (cartographie) : lancé « à l'arrêt » (autostart false). Le
+    # répartiteur le démarre seulement quand on crée une carte (voir cartographie.py).
+    slam = IncludeLaunchDescription(
+        PythonLaunchDescriptionSource(os.path.join(
+            get_package_share_directory('slam_toolbox'), 'launch', 'online_async_launch.py')),
+        launch_arguments={'autostart': 'false', 'use_sim_time': 'true'}.items())
+
     # Les serveurs qui publient des vitesses passent par le lisseur de vitesse.
     vers_lisseur = [('cmd_vel', 'cmd_vel_nav')]
     navigation = GroupAction([
@@ -147,6 +155,6 @@ def generate_launch_description():
 
     return LaunchDescription(arguments + [
         conversion_monde, nettoyage_monde, robot_sim, gazebo, fenetre_gazebo, etat_robot,
-        conteneur, localisation, navigation,
+        conteneur, localisation, slam, navigation,
         repartiteur, page_web, outil_rviz,
     ])

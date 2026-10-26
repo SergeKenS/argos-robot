@@ -5,6 +5,7 @@ Modes (un seul actif à la fois) :
   APPEL      : va au point demandé, puis repasse en VEILLE sur place
   PATROUILLE : enchaîne en boucle les points de la liste « patrouille »
 Plus un état de repos ECHEC : un appel a échoué, le robot attend une commande.
+Et un état CARTOGRAPHIE : on dessine une nouvelle carte (pilotage manuel seulement).
 
 Commandes (texte sur /argos/commande) :
   « veille », « appel <point> », « patrouille », « base » (= « appel base »)
@@ -13,6 +14,9 @@ Commandes (texte sur /argos/commande) :
   « supprimer <nom> »
   « definir_patrouille <nom> <nom>... » : ordre de patrouille (vide = aucune)
   « carte <nom> »              : charge maps/<nom>.yaml et ses points maps/<nom>_points.yaml
+  « cartographier »            : passe en CARTOGRAPHIE (SLAM Toolbox)
+  « enregistrer <nom> »        : sauvegarde la nouvelle carte et repasse en navigation dessus
+  « abandonner »               : quitte la cartographie sans sauvegarder
 État publié sur /argos/etat : « VEILLE », « APPEL alpha », « PATROUILLE beta »...
 Points, carte actuelle et cartes disponibles publiés sur /argos/points (JSON).
 
@@ -34,6 +38,7 @@ from rclpy.qos import DurabilityPolicy, QoSProfile, ReliabilityPolicy
 from rclpy.signals import SignalHandlerOptions
 from std_msgs.msg import String
 
+from argos_mission import cartographie
 from argos_mission.aller_a import creer_pose
 
 # Arbre de comportement fourni par Nav2 : il ne recalcule le chemin que si le
@@ -78,6 +83,8 @@ class Repartiteur(BasicNavigator):
         self.echecs_consecutifs = 0    # pour détecter une patrouille impossible
         self.commande_en_attente = None
         self.pose_robot = None         # dernière position estimée par AMCL
+        self.pose_slam = None          # dernière position estimée par SLAM Toolbox
+        self.depart_carto = None       # position au début de la cartographie (→ base)
 
         # « TRANSIENT_LOCAL » : le dernier message reste disponible, même pour un
         # abonné qui arrive plus tard (ex. la page web ouverte après coup).
@@ -90,6 +97,8 @@ class Repartiteur(BasicNavigator):
         # AMCL publie sa position avec la même QoS (voir robot_navigator.py).
         self.create_subscription(PoseWithCovarianceStamped, 'amcl_pose',
                                  self.recevoir_pose, qos_dernier)
+        # Pendant la cartographie, SLAM Toolbox publie la position du robot sur « pose ».
+        self.create_subscription(PoseWithCovarianceStamped, 'pose', self.recevoir_pose_slam, 10)
 
         self.publier_etat()
         self.publier_points()
@@ -104,6 +113,13 @@ class Repartiteur(BasicNavigator):
     def recevoir_pose(self, msg):
         """Mémorise la dernière position du robot (pour « ajouter <nom> »)."""
         self.pose_robot = msg.pose.pose
+
+    def recevoir_pose_slam(self, msg):
+        """Position sur la carte en cours de création ; la première devient la base."""
+        # SLAM Toolbox ne publie que pendant la cartographie (remis à None au départ).
+        self.pose_slam = msg.pose.pose
+        if self.depart_carto is None:
+            self.depart_carto = msg.pose.pose
 
     def publier_points(self):
         donnees = {'points': self.points, 'patrouille': self.patrouille,
@@ -145,6 +161,16 @@ class Repartiteur(BasicNavigator):
             # Raccourci : « base » = « appel base » (le point de base s'appelle « base »).
             action, mots = 'appel', ['appel', 'base']
 
+        # En cartographie, on n'accepte que de la terminer (pilotage manuel à part).
+        if self.mode == 'CARTOGRAPHIE':
+            if action == 'enregistrer' and len(mots) == 2:
+                self.enregistrer_carte(mots[1])
+            elif action == 'abandonner':
+                self.abandonner_cartographie()
+            else:
+                self.get_logger().warn('Cartographie en cours : enregistrer ou abandonner.')
+            return
+
         if action == 'veille':
             self.annuler_mission()
             self.passer_au_repos('VEILLE')
@@ -172,6 +198,8 @@ class Repartiteur(BasicNavigator):
             self.definir_patrouille(mots[1:])
         elif action == 'carte' and len(mots) == 2:
             self.changer_carte(mots[1])
+        elif action == 'cartographier':
+            self.demarrer_cartographie()
         else:
             self.get_logger().warn(f'Commande inconnue : « {texte} »')
 
@@ -265,6 +293,69 @@ class Repartiteur(BasicNavigator):
         self.publier_points()
         self.get_logger().info(f'Carte {nom} chargée : replacer le robot sur la carte.')
 
+    # --- Création d'une carte (voir cartographie.py) ---------------------------
+
+    def demarrer_cartographie(self):
+        self.annuler_mission()
+        self.passer_au_repos('VEILLE')
+        self.pose_slam = None
+        self.depart_carto = None
+        if cartographie.demarrer(self):
+            self.mode = 'CARTOGRAPHIE'
+            self.publier_etat()
+        else:
+            self.get_logger().error('Impossible de démarrer la cartographie.')
+
+    def enregistrer_carte(self, nom):
+        fichier = os.path.join(self.dossier_cartes, nom)
+        if not FORMAT_NOM.match(nom):
+            self.get_logger().warn(f'Nom de carte invalide : {nom} (minuscules, chiffres, _)')
+            return
+        if os.path.exists(fichier + '.yaml'):
+            self.get_logger().warn(f'La carte {nom} existe déjà : choisir un autre nom.')
+            return
+        if not cartographie.sauvegarder(fichier):
+            # On reste en cartographie : rien n'est perdu, on peut réessayer.
+            self.get_logger().error(f'Échec de la sauvegarde de {fichier}.')
+            return
+
+        # Positions à retenir avant d'arrêter SLAM Toolbox.
+        pose_actuelle, depart = self.pose_slam, self.depart_carto
+        cartographie.arreter(self)
+
+        # Nouvelle carte, avec un point « base » là où la cartographie a commencé.
+        self.carte = nom
+        self.chemin_points = fichier + '_points.yaml'
+        self.points = {'base': self.pose_vers_point(depart)}
+        self.patrouille = []
+        self.enregistrer_points()
+        self.changeMap(fichier + '.yaml')
+        self.clearAllCostmaps()
+
+        # SLAM connaissait la position exacte du robot sur cette carte : on la donne
+        # à AMCL, ainsi pas besoin de « Placer le robot ».
+        self.setInitialPose(creer_pose(self, self.pose_vers_point(pose_actuelle)))
+        self.passer_au_repos('VEILLE')
+        self.get_logger().info(f'Carte {nom} enregistrée et chargée.')
+
+    def abandonner_cartographie(self):
+        cartographie.arreter(self)
+        # Recharger l'ancienne carte la republie (la page et Nav2 l'affichent à nouveau).
+        self.changeMap(os.path.join(self.dossier_cartes, self.carte + '.yaml'))
+        self.clearAllCostmaps()
+        self.passer_au_repos('VEILLE')
+        self.get_logger().info('Cartographie abandonnée : replacer le robot sur la carte.')
+
+    @staticmethod
+    def pose_vers_point(pose):
+        """Pose ROS → point {x, y, theta} ; sans pose connue, l'origine de la carte."""
+        if pose is None:
+            return {'x': 0.0, 'y': 0.0, 'theta': 0.0}
+        q = pose.orientation
+        theta = math.atan2(2 * q.w * q.z, 1 - 2 * q.z * q.z)
+        return {'x': round(pose.position.x, 2), 'y': round(pose.position.y, 2),
+                'theta': round(theta, 2)}
+
     # --- Gestion des points (page web) ------------------------------------------
 
     def ajouter_point(self, nom, coordonnees):
@@ -279,21 +370,17 @@ class Repartiteur(BasicNavigator):
             except ValueError:
                 self.get_logger().warn(f'Coordonnées invalides : {coordonnees}')
                 return
-            theta = 0.0
+            point = {'x': round(x, 2), 'y': round(y, 2), 'theta': 0.0}
         else:
             # Position actuelle du robot, telle qu'estimée par AMCL.
             if self.pose_robot is None:
-                self.get_logger().warn('Position du robot inconnue : faire « 2D Pose Estimate »')
+                self.get_logger().warn('Position du robot inconnue : le placer sur la carte.')
                 return
-            x = self.pose_robot.position.x
-            y = self.pose_robot.position.y
-            # Inverse de creer_pose : quaternion (rotation autour de z) → angle.
-            q = self.pose_robot.orientation
-            theta = math.atan2(2 * q.w * q.z, 1 - 2 * q.z * q.z)
+            point = self.pose_vers_point(self.pose_robot)
 
-        self.points[nom] = {'x': round(x, 2), 'y': round(y, 2), 'theta': round(theta, 2)}
+        self.points[nom] = point
         self.enregistrer_points()
-        self.get_logger().info(f'Point {nom} enregistré : x={x:.2f} y={y:.2f}')
+        self.get_logger().info(f'Point {nom} enregistré : x={point["x"]} y={point["y"]}')
 
     def supprimer_point(self, nom):
         if nom not in self.points:

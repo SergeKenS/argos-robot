@@ -178,11 +178,15 @@ sur sa position, glisser vers où il regarde) **dans les 60 s** après le lancem
   puis il faut replacer le robot. Commande équivalente : `carte <nom>`.
   Au prochain lancement, c'est la carte `carte:=` (par défaut `arene`) qui est chargée.
 
-## Cartographie depuis la page web (en cours)
+## Cartographie depuis la page web
 
 1. **Pilotage manuel** ✔ : carte « Pilotage manuel » de la page, maintenir
    ▲ ▼ ◀ ▶ (ou les flèches du clavier). Seulement en veille. Vitesses : 0,2 m/s et
    0,8 rad/s. Publie sur `/cmd_vel_nav`, donc passe par `collision_monitor` (le robot
    ralentit puis s'arrête devant un obstacle). Bouton relâché ou page figée : arrêt.
-2. Basculer en mode cartographie (SLAM Toolbox) : à venir.
-3. Enregistrer la carte et revenir en navigation : à venir.
+2. **Nouvelle carte** (non testé) : bouton « Nouvelle carte » (commande `cartographier`).
+   La localisation (map_server + AMCL) est arrêtée, SLAM Toolbox démarré, sans relancer.
+   Promener le robot avec le pilotage manuel, la carte se dessine sur la page.
+3. **Enregistrer** (commande `enregistrer <nom>`) : `maps/<nom>.yaml` + `.pgm`, un point
+   `base` au point de départ, retour en navigation, robot replacé automatiquement.
+   **Abandonner** (commande `abandonner`) : retour à la carte d'avant, replacer le robot.

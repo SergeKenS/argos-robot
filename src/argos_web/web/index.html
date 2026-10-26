@@ -88,6 +88,11 @@
   .pastille.APPEL { background: var(--accent-soft); color: var(--accent); }
   .pastille.PATROUILLE { background: var(--ok-soft); color: var(--ok); }
   .pastille.ECHEC { background: var(--danger-soft); color: var(--danger); }
+  .pastille.CARTOGRAPHIE { background: var(--warn-soft); color: var(--warn); }
+
+  /* Pendant la cartographie, on n'affiche que ce qui sert à la terminer. */
+  body.cartographie .hors-carto { display: none; }
+  body:not(.cartographie) .en-carto { display: none; }
   #detail-etat { color: var(--muted); }
 
   /* Boutons */
@@ -170,13 +175,24 @@
       <span><i style="background:var(--ok)"></i>Patrouille (ordre)</span>
       <span><i style="background:var(--select)"></i>Emplacement choisi</span>
     </div>
-    <div class="rangee commande" style="margin-top:12px">
+    <div class="rangee commande hors-carto" style="margin-top:12px">
       <button id="btn-placer" title="Équivalent de « 2D Pose Estimate » dans RViz">
         Placer le robot sur la carte</button>
     </div>
-    <div class="rangee commande" style="margin-top:8px">
+    <div class="rangee commande hors-carto" style="margin-top:8px">
       <select id="choix-carte" aria-label="Carte"></select>
       <button id="btn-carte">Charger cette carte</button>
+      <button id="btn-cartographier">Nouvelle carte</button>
+    </div>
+    <div class="commande en-carto" style="margin-top:12px">
+      <div class="aide" style="margin-top:0">Promenez le robot partout avec le pilotage
+        manuel : la carte se dessine en direct (mise à jour toutes les ~5 s).</div>
+      <div class="rangee">
+        <input id="nom-carte" type="text" placeholder="Nom de la carte (ex. maison_dupont)"
+               autocomplete="off" spellcheck="false" style="flex:2">
+        <button id="btn-enregistrer" class="principal" disabled>Enregistrer</button>
+        <button id="btn-abandonner">Abandonner</button>
+      </div>
     </div>
   </section>
 
@@ -188,11 +204,11 @@
         <div id="pastille-etat" class="pastille">…</div>
         <div id="detail-etat">En attente du répartiteur…</div>
       </div>
-      <div class="rangee">
+      <div class="rangee hors-carto">
         <button id="btn-patrouille" class="principal">Lancer la patrouille</button>
         <button id="btn-base" class="principal" title="Ajoutez un point nommé « base » pour l'activer">Retour à la base</button>
       </div>
-      <div class="rangee" style="margin-top:8px">
+      <div class="rangee hors-carto" style="margin-top:8px">
         <button id="btn-veille" class="danger">Arrêt (veille)</button>
       </div>
     </section>
@@ -208,7 +224,7 @@
       </div>
     </section>
 
-    <section class="carte commande">
+    <section class="carte commande hors-carto">
       <h2>Points <span id="ordre-patrouille"></span></h2>
       <ul id="liste-points" class="points"></ul>
       <input id="nom-point" type="text" placeholder="Nom du nouveau point (ex. chambre_101)"
@@ -329,6 +345,11 @@ function abonner() {
     ros, name: "/amcl_pose", messageType: "geometry_msgs/msg/PoseWithCovarianceStamped",
   }).subscribe(recevoirAmcl);
 
+  // Pendant la cartographie, c'est SLAM Toolbox qui publie la position (même format).
+  new ROSLIB.Topic({
+    ros, name: "/pose", messageType: "geometry_msgs/msg/PoseWithCovarianceStamped",
+  }).subscribe(recevoirAmcl);
+
   // L'odométrie arrive très souvent : on la limite à 10 messages/s (throttle_rate en ms).
   new ROSLIB.Topic({
     ros, name: "/odom", messageType: "nav_msgs/msg/Odometry", throttle_rate: 100,
@@ -347,7 +368,12 @@ function recevoirEtat(texte) {
   const [mode, c] = texte.split(" ");
   const cible = c || null;
   if (mode !== etat.mode || cible !== etat.cible) journal(`État : ${texte}`);
+  // Début de cartographie : la position connue appartient à l'ancienne carte.
+  if (mode === "CARTOGRAPHIE" && etat.mode !== "CARTOGRAPHIE") {
+    robot = null; carteVersOdom = null; selection = null;
+  }
   etat = { mode, cible };
+  document.body.classList.toggle("cartographie", mode === "CARTOGRAPHIE");
 
   const pastille = $("pastille-etat");
   pastille.textContent = mode;
@@ -357,6 +383,7 @@ function recevoirEtat(texte) {
     APPEL: `En route vers ${cible}.`,
     PATROUILLE: `Patrouille, en route vers ${cible}.`,
     ECHEC: `Échec vers ${cible}. Le robot attend une commande.`,
+    CARTOGRAPHIE: "Création d'une nouvelle carte.",
   };
   $("detail-etat").textContent = details[mode] || texte;
   majPilotage();
@@ -370,7 +397,7 @@ function recevoirPoints(donnees) {
   // Nouvelle carte chargée : l'ancienne position du robot n'a plus de sens.
   if (carteActuelle && donnees.carte !== carteActuelle) {
     robot = null; carteVersOdom = null; selection = null;
-    journal(`Carte « ${donnees.carte} » chargée. Placez le robot sur la carte.`);
+    journal(`Carte « ${donnees.carte} » chargée.`);
     majBoutonsAjout();
   }
   carteActuelle = donnees.carte;
@@ -756,7 +783,7 @@ function arreterPilotage() {
 
 // Le pilotage manuel n'est permis qu'au repos, pour ne pas contredire Nav2.
 function pilotageAutorise() {
-  return etat.mode === "VEILLE" || etat.mode === "ECHEC";
+  return ["VEILLE", "ECHEC", "CARTOGRAPHIE"].includes(etat.mode);
 }
 function majPilotage() {
   const ok = pilotageAutorise();
@@ -789,6 +816,29 @@ document.addEventListener("keydown", (e) => {
 });
 document.addEventListener("keyup", (e) => { if (TOUCHES[e.key]) arreterPilotage(); });
 window.addEventListener("blur", arreterPilotage);   // fenêtre quittée : on arrête
+
+// ===== Créer une nouvelle carte ==============================================
+$("btn-cartographier").addEventListener("click", () => {
+  if (confirm("Commencer une nouvelle carte ? Le robot s'arrête ; promenez-le ensuite "
+      + "avec le pilotage manuel. La base sera placée là où il se trouve maintenant.")) {
+    envoyer("cartographier");
+  }
+});
+$("nom-carte").addEventListener("input", (e) => {
+  e.target.value = e.target.value.toLowerCase().replace(/[\s-]/g, "_");
+  const nom = e.target.value;
+  // Même règle que les points ; un nom déjà pris écraserait une carte existante.
+  const pris = [...$("choix-carte").options].some((option) => option.value === nom);
+  $("btn-enregistrer").disabled = !FORMAT_NOM.test(nom) || pris;
+});
+$("btn-enregistrer").addEventListener("click", () => {
+  envoyer(`enregistrer ${$("nom-carte").value}`);
+  $("nom-carte").value = "";
+  $("btn-enregistrer").disabled = true;
+});
+$("btn-abandonner").addEventListener("click", () => {
+  if (confirm("Abandonner la nouvelle carte ? Elle sera perdue.")) envoyer("abandonner");
+});
 
 // ===== Boutons de mode =======================================================
 $("btn-patrouille").addEventListener("click", () => envoyer("patrouille"));
