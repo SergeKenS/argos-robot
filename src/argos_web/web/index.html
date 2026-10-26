@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>ARGOS — Pilotage</title>
+<title>ARGOS · Pilotage</title>
 <style>
   /* ---- Couleurs (thème clair, puis sombre selon le réglage du système) ---- */
   :root {
@@ -168,7 +168,7 @@
     <section class="carte commande">
       <h2>Mode</h2>
       <div class="etat">
-        <div id="pastille-etat" class="pastille">—</div>
+        <div id="pastille-etat" class="pastille">…</div>
         <div id="detail-etat">En attente du répartiteur…</div>
       </div>
       <div class="rangee">
@@ -306,7 +306,7 @@ function recevoirEtat(texte) {
   const details = {
     VEILLE: "Au repos, en attente d'une commande.",
     APPEL: `En route vers ${cible}.`,
-    PATROUILLE: `Patrouille — en route vers ${cible}.`,
+    PATROUILLE: `Patrouille, en route vers ${cible}.`,
     ECHEC: `Échec vers ${cible}. Le robot attend une commande.`,
   };
   $("detail-etat").textContent = details[mode] || texte;

@@ -10,18 +10,18 @@ source /opt/ros/jazzy/setup.bash
 sudo apt install ros-jazzy-nav2-bringup ros-jazzy-navigation2 ros-jazzy-key-teleop
 ```
 
-## Étape 1 — Piloter le robot au clavier ✔
+## Étape 1 : Piloter le robot au clavier ✔
 
-Terminal 1 — simulation (Gazebo + RViz) :
+Terminal 1, simulation (Gazebo + RViz) :
 ```
 ros2 launch nav2_bringup tb3_simulation_launch.py headless:=False
 ```
-Terminal 2 — clavier (flèches, `q` pour quitter) :
+Terminal 2, clavier (flèches, `q` pour quitter) :
 ```
 ros2 run key_teleop key_teleop --ros-args -r key_vel:=cmd_vel -p twist_stamped_enabled:=false
 ```
 
-## Étape 2 — Cartographier (SLAM) ✔
+## Étape 2 : Cartographier (SLAM) ✔
 
 Terminal 1 :
 ```
@@ -29,14 +29,14 @@ ros2 launch nav2_bringup tb3_simulation_launch.py headless:=False slam:=True
 ```
 Terminal 2 : le clavier, comme à l'étape 1. Faire le tour de l'arène.
 
-Terminal 3 — sauvegarder la carte :
+Terminal 3, sauvegarder la carte :
 ```
 mkdir -p ~/Documents/Projet/argos_ws/maps
 ros2 run nav2_map_server map_saver_cli -f ~/Documents/Projet/argos_ws/maps/arene
 ```
 Résultat : `arene.pgm` (image) + `arene.yaml` (description).
 
-## Étape 3 — Naviguer sur la carte ✔
+## Étape 3 : Naviguer sur la carte ✔
 
 ```
 ros2 launch nav2_bringup tb3_simulation_launch.py headless:=False map:=$HOME/Documents/Projet/argos_ws/maps/arene.yaml
@@ -50,7 +50,7 @@ Ce qui calcule le trajet :
 - **NavFn** (Dijkstra) : le chemin le plus court sur la carte.
 - **MPPI** : la conduite (marche arrière, orientation finale).
 
-## Étape 4 — Aller à un point nommé ✔
+## Étape 4 : Aller à un point nommé ✔
 
 Paquet `argos_mission` (dans `src/`) :
 - `config/points.yaml` : nom → x, y, theta (relevés avec RViz → **Publish Point**
@@ -70,7 +70,7 @@ Lancer (simulation de l'étape 3 démarrée, 2D Pose Estimate fait) :
 ros2 run argos_mission aller_a alpha
 ```
 
-## Étape 5 — Répartiteur à 3 modes ✔
+## Étape 5 : Répartiteur à 3 modes ✔
 
 - `maps/arene_points.yaml` : points + ordre de patrouille (un fichier par carte)
 - `argos_mission/repartiteur.py` : machine à états VEILLE / APPEL / PATROUILLE
@@ -78,15 +78,15 @@ ros2 run argos_mission aller_a alpha
 - `config/nav2_params.yaml` : copie des paramètres Nav2, marge d'obstacle
   `inflation_radius` 0.70 → **0.25** (jamais sous 0.22, le rayon du robot)
 
-Terminal 1 — simulation avec nos paramètres :
+Terminal 1, simulation avec nos paramètres :
 ```
 ros2 launch nav2_bringup tb3_simulation_launch.py headless:=False map:=$HOME/Documents/Projet/argos_ws/maps/arene.yaml params_file:=$HOME/Documents/Projet/argos_ws/src/argos_mission/config/nav2_params.yaml
 ```
-Terminal 2 — répartiteur :
+Terminal 2, répartiteur :
 ```
 ros2 run argos_mission repartiteur --ros-args -p fichier_points:=$HOME/Documents/Projet/argos_ws/maps/arene_points.yaml
 ```
-Terminal 3 — commandes (`appel <point>`, `patrouille`, `veille`) :
+Terminal 3, commandes (`appel <point>`, `patrouille`, `veille`) :
 ```
 ros2 topic pub --once /argos/commande std_msgs/String "data: 'appel beta'"
 ```
@@ -121,7 +121,7 @@ Mesurer sur le Pi : `ros2 topic hz /cmd_vel_nav`, `htop`, `vcgencmd measure_temp
   moins bien un obstacle imprévu. Changement : un bloc dans `config/nav2_params.yaml`.
   À appliquer seulement si le besoin se confirme.
 
-## Étape 6 — Page web (non testée)
+## Étape 6 : Page web (non testée)
 
 Paquet `argos_web` (dans `src/`) :
 - `web/index.html` : la page (carte, mode, points, réglages, journal)
