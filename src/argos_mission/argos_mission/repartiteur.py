@@ -135,9 +135,14 @@ class Repartiteur(BasicNavigator):
 
         niveau : 'info', 'avertissement' ou 'erreur'.
         """
-        ecrire = {'info': self.get_logger().info, 'avertissement': self.get_logger().warn,
-                  'erreur': self.get_logger().error}[niveau]
-        ecrire(texte)
+        # Un appel distinct par niveau : rclpy refuse qu'une même ligne de code
+        # écrive tantôt en info, tantôt en erreur (« Logger severity cannot be changed »).
+        if niveau == 'erreur':
+            self.get_logger().error(texte)
+        elif niveau == 'avertissement':
+            self.get_logger().warn(texte)
+        else:
+            self.get_logger().info(texte)
         self.pub_journal.publish(String(data=json.dumps({'niveau': niveau, 'texte': texte})))
 
     def publier_etat(self):
