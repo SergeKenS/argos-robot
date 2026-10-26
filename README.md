@@ -18,7 +18,8 @@ Les points (ex. `chambre_101`) sont définis dans un fichier YAML.
 
 ## Livrables de fin de projet
 
-1. **Un robot réel** : 2 roues motrices, LiDAR 2D, IMU.
+1. **Un robot réel** : 2 roues motrices, LiDAR 2D, IMU, Raspberry Pi 5 (navigation, page web)
+   et ESP32 (moteurs).
 2. **Une carte** du bâtiment, faite par le robot lui-même.
 3. **La navigation autonome** vers n'importe quel point nommé.
 4. **Les trois modes** APPEL, PATROUILLE et VEILLE.
