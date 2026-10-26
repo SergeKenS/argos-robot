@@ -194,13 +194,13 @@ sur sa position, glisser vers où il regarde). Délai : 5 min (`initial_transfor
 Note : les cartes créées depuis la page n'existent que sur la machine du robot tant
 qu'on ne les a pas envoyées sur GitHub (`git add maps && git commit && git push`).
 
-## Messages du robot sur la page (non testé)
+## Messages du robot sur la page ✔
 
 Le répartiteur publie ses messages sur `/argos/journal` (point enregistré, commande
 refusée, échec de sauvegarde...). Ils s'affichent dans le **Journal** de la page,
 préfixés « Robot : » (orange = avertissement, rouge = erreur).
 
-## Redémarrer la navigation (non testé)
+## Redémarrer la navigation ✔
 
 Si le robot n'a pas été placé dans les 5 min, Nav2 abandonne son démarrage et refuse
 toute destination. Sans rien relancer : placer le robot, puis bouton **Redémarrer la
