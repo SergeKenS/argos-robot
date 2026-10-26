@@ -58,8 +58,8 @@ def generate_launch_description():
         DeclareLaunchArgument('dossier_cartes',
                               default_value=os.path.expanduser('~/Documents/Projet/argos_ws/maps'),
                               description='Dossier des cartes et des fichiers de points'),
-        DeclareLaunchArgument('rviz', default_value='true',
-                              description='Ouvrir RViz (outil de développement)'),
+        DeclareLaunchArgument('rviz', default_value='false',
+                              description='Ouvrir RViz (outil de dev, la page web suffit)'),
         DeclareLaunchArgument('gazebo_gui', default_value='true',
                               description="Afficher la fenêtre 3D de Gazebo"),
     ]

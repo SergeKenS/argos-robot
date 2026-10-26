@@ -161,6 +161,10 @@
       <span><i style="background:var(--ok)"></i>Patrouille (ordre)</span>
       <span><i style="background:var(--select)"></i>Emplacement choisi</span>
     </div>
+    <div class="rangee commande" style="margin-top:12px">
+      <button id="btn-placer" title="Équivalent de « 2D Pose Estimate » dans RViz">
+        Placer le robot sur la carte</button>
+    </div>
   </section>
 
   <!-- Colonne droite : commandes -->
@@ -236,6 +240,9 @@ let selection = null;           // emplacement cliqué sur la carte {x, y}
 let robot = null;               // position du robot sur la carte {x, y, t}
 let carteVersOdom = null;       // pour lisser la position (voir recevoirOdom)
 let odomActuelle = null;
+let topicPositionInitiale = null;  // /initialpose (comme « 2D Pose Estimate » de RViz)
+let placement = null;           // placement du robot en cours : {depart, fin} en mètres
+let ignorerClic = false;        // le relâchement d'un placement ne doit pas sélectionner
 
 const $ = (id) => document.getElementById(id);
 const canvas = $("canvas-carte");
@@ -266,6 +273,13 @@ function abonner() {
   topicCommande = new ROSLIB.Topic({
     ros, name: "/argos/commande", messageType: "std_msgs/msg/String",
   });
+
+  // Annoncé dès la connexion : le tout premier message publié juste après
+  // l'annonce risquerait d'être perdu, le temps que ROS relie les deux côtés.
+  topicPositionInitiale = new ROSLIB.Topic({
+    ros, name: "/initialpose", messageType: "geometry_msgs/msg/PoseWithCovarianceStamped",
+  });
+  topicPositionInitiale.advertise();
 
   new ROSLIB.Topic({ ros, name: "/argos/etat", messageType: "std_msgs/msg/String" })
     .subscribe((msg) => recevoirEtat(msg.data));
@@ -472,6 +486,19 @@ function dessinerMaintenant() {
     ctx.lineTo(x + Math.cos(robot.t) * rayon * 1.6, y - Math.sin(robot.t) * rayon * 1.6);
     ctx.strokeStyle = couleur("--robot"); ctx.lineWidth = 3 * dpr; ctx.stroke();
   }
+
+  // Placement en cours : flèche pointillée du point pressé vers le pointeur.
+  if (placement && placement.depart) {
+    const [x1, y1] = versEcran(v, placement.depart.x, placement.depart.y);
+    const fin = placement.fin || placement.depart;
+    const [x2, y2] = versEcran(v, fin.x, fin.y);
+    ctx.setLineDash([6 * dpr, 4 * dpr]);
+    ctx.beginPath(); ctx.moveTo(x1, y1); ctx.lineTo(x2, y2);
+    ctx.strokeStyle = couleur("--robot"); ctx.lineWidth = 3 * dpr; ctx.stroke();
+    ctx.setLineDash([]);
+    ctx.beginPath(); ctx.arc(x1, y1, 6 * dpr, 0, 2 * Math.PI);
+    ctx.fillStyle = couleur("--robot"); ctx.fill();
+  }
 }
 
 // Le canvas suit la taille de son cadre (et la densité de pixels de l'écran).
@@ -487,20 +514,84 @@ matchMedia("(prefers-color-scheme: dark)").addEventListener("change", () => {
   imageCarte = null; dessiner();
 });
 
-// Clic sur la carte : on retient l'emplacement (en mètres).
-canvas.addEventListener("click", (e) => {
-  if (!carte) return;
+// Position du pointeur sur la carte, en mètres (null si hors de la carte).
+function pointeurSurCarte(e) {
   const dpr = window.devicePixelRatio || 1;
   const rect = canvas.getBoundingClientRect();
   const [x, y] = versCarte(vue(), (e.clientX - rect.left) * dpr, (e.clientY - rect.top) * dpr);
   const i = carte.info, xmax = i.origin.position.x + i.width * i.resolution;
   const ymax = i.origin.position.y + i.height * i.resolution;
-  if (x < i.origin.position.x || x > xmax || y < i.origin.position.y || y > ymax) return;
-  selection = { x: Math.round(x * 100) / 100, y: Math.round(y * 100) / 100 };
+  if (x < i.origin.position.x || x > xmax || y < i.origin.position.y || y > ymax) return null;
+  return { x, y };
+}
+
+// Clic sur la carte : on retient l'emplacement (en mètres).
+canvas.addEventListener("click", (e) => {
+  if (ignorerClic) { ignorerClic = false; return; }
+  if (!carte || placement) return;
+  const p = pointeurSurCarte(e);
+  if (!p) return;
+  selection = { x: Math.round(p.x * 100) / 100, y: Math.round(p.y * 100) / 100 };
   $("info-selection").textContent = `Emplacement choisi : x ${selection.x} · y ${selection.y}`;
   majBoutonsAjout();
   dessiner();
 });
+
+// ===== Placer le robot (équivalent de « 2D Pose Estimate » de RViz) ==========
+// On appuie là où est le robot, on glisse vers là où il regarde, on relâche.
+$("btn-placer").addEventListener("click", () => {
+  placement = placement ? null : { depart: null, fin: null };
+  $("btn-placer").textContent = placement ? "Annuler le placement" : "Placer le robot sur la carte";
+  $("info-selection").textContent = placement
+    ? "Appuyez sur la position du robot, glissez vers où il regarde, relâchez."
+    : "Cliquez sur la carte pour choisir un emplacement";
+  canvas.style.touchAction = placement ? "none" : "";   // pas de défilement pendant le geste
+  dessiner();
+});
+
+canvas.addEventListener("pointerdown", (e) => {
+  if (!placement || !carte) return;
+  const p = pointeurSurCarte(e);
+  if (!p) return;
+  placement.depart = p;
+  canvas.setPointerCapture(e.pointerId);   // suivre le geste même hors du canvas
+  dessiner();
+});
+
+canvas.addEventListener("pointermove", (e) => {
+  if (!placement || !placement.depart) return;
+  placement.fin = pointeurSurCarte(e) || placement.fin;
+  dessiner();
+});
+
+canvas.addEventListener("pointerup", () => {
+  if (!placement || !placement.depart) return;
+  const { depart, fin } = placement;
+  // Orientation = direction du glissé. Glissé trop court : on garde l'orientation actuelle.
+  const glisse = fin && Math.hypot(fin.x - depart.x, fin.y - depart.y) > 0.1;
+  const t = glisse ? Math.atan2(fin.y - depart.y, fin.x - depart.x) : (robot ? robot.t : 0);
+  publierPositionInitiale(depart.x, depart.y, t);
+  ignorerClic = true;   // le « click » qui suit ne doit pas devenir une sélection
+  $("btn-placer").click();   // quitte le mode placement
+});
+
+function publierPositionInitiale(x, y, t) {
+  const covariance = new Array(36).fill(0);
+  // Incertitude de départ, mêmes valeurs que RViz : 0,25 m² en x et y, ~0,07 rad² en angle.
+  covariance[0] = 0.25; covariance[7] = 0.25; covariance[35] = 0.06853891945200942;
+  topicPositionInitiale.publish({
+    // AMCL n'accepte une position que dans le repère de la carte (« map »).
+    header: { frame_id: "map", stamp: { sec: 0, nanosec: 0 } },
+    pose: {
+      pose: {
+        position: { x, y, z: 0 },
+        orientation: { x: 0, y: 0, z: Math.sin(t / 2), w: Math.cos(t / 2) },
+      },
+      covariance,
+    },
+  });
+  journal(`Robot placé : x ${x.toFixed(2)} · y ${y.toFixed(2)} · θ ${t.toFixed(2)}`);
+}
 
 // ===== Liste des points ======================================================
 function afficherPoints() {
