@@ -128,6 +128,11 @@
   .aide { font-size: 12px; color: var(--muted); margin: 6px 0 10px; }
   .erreur { color: var(--danger); }
 
+  /* Pavé de pilotage */
+  .pave { display: grid; grid-template-columns: repeat(3, 64px); gap: 8px; justify-content: center; }
+  .pave button { height: 56px; font-size: 20px; touch-action: none; user-select: none; }
+  .pave button.actif { background: var(--accent); border-color: var(--accent); color: #fff; }
+
   /* Réglages */
   .reglage { display: flex; align-items: center; gap: 12px; }
   input[type=range] { flex: 1; accent-color: var(--accent); }
@@ -193,6 +198,17 @@
     </section>
 
     <section class="carte commande">
+      <h2>Pilotage manuel <span id="info-pilotage">Maintenir appuyé (ou flèches du clavier)</span></h2>
+      <div class="pave">
+        <span></span><button data-lin="1" data-ang="0" aria-label="Avancer">▲</button><span></span>
+        <button data-lin="0" data-ang="1" aria-label="Tourner à gauche">◀</button>
+        <button data-lin="0" data-ang="0" aria-label="Stop">■</button>
+        <button data-lin="0" data-ang="-1" aria-label="Tourner à droite">▶</button>
+        <span></span><button data-lin="-1" data-ang="0" aria-label="Reculer">▼</button><span></span>
+      </div>
+    </section>
+
+    <section class="carte commande">
       <h2>Points <span id="ordre-patrouille"></span></h2>
       <ul id="liste-points" class="points"></ul>
       <input id="nom-point" type="text" placeholder="Nom du nouveau point (ex. chambre_101)"
@@ -252,6 +268,7 @@ let odomActuelle = null;
 let topicPositionInitiale = null;  // /initialpose (comme « 2D Pose Estimate » de RViz)
 let placement = null;           // placement du robot en cours : {depart, fin} en mètres
 let ignorerClic = false;        // le relâchement d'un placement ne doit pas sélectionner
+let topicVitesse = null;        // /cmd_vel_nav (pilotage manuel)
 
 const $ = (id) => document.getElementById(id);
 const canvas = $("canvas-carte");
@@ -270,6 +287,7 @@ function connecter() {
     lireMarge();
   });
   ros.on("close", () => {
+    arreterPilotage();
     document.body.classList.add("deconnecte");
     $("connexion").textContent = "Déconnecté";
     $("connexion").classList.remove("ok");
@@ -289,6 +307,14 @@ function abonner() {
     ros, name: "/initialpose", messageType: "geometry_msgs/msg/PoseWithCovarianceStamped",
   });
   topicPositionInitiale.advertise();
+
+  // Pilotage manuel : on publie là où Nav2 publie lui-même ses vitesses, pour
+  // passer par le lisseur de vitesse puis par collision_monitor (arrêt devant
+  // un obstacle). Chaîne : cmd_vel_nav → lisseur → collision_monitor → cmd_vel.
+  topicVitesse = new ROSLIB.Topic({
+    ros, name: "/cmd_vel_nav", messageType: "geometry_msgs/msg/Twist",
+  });
+  topicVitesse.advertise();
 
   new ROSLIB.Topic({ ros, name: "/argos/etat", messageType: "std_msgs/msg/String" })
     .subscribe((msg) => recevoirEtat(msg.data));
@@ -333,6 +359,7 @@ function recevoirEtat(texte) {
     ECHEC: `Échec vers ${cible}. Le robot attend une commande.`,
   };
   $("detail-etat").textContent = details[mode] || texte;
+  majPilotage();
   dessiner();
 }
 
@@ -696,6 +723,73 @@ $("btn-ajout-clic").addEventListener("click", () => {
   $("nom-point").value = ""; majBoutonsAjout();
 });
 
+// ===== Pilotage manuel =======================================================
+// Vitesses modérées : le robot reste facile à contrôler depuis un téléphone.
+const VITESSE_LINEAIRE = 0.2;   // m/s
+const VITESSE_ROTATION = 0.8;   // rad/s
+let mouvement = null;           // {lin, ang} pendant qu'un bouton est maintenu
+let minuterieMouvement = null;
+
+function publierVitesse(lin, ang) {
+  if (!topicVitesse) return;
+  topicVitesse.publish({ linear: { x: lin, y: 0, z: 0 }, angular: { x: 0, y: 0, z: ang } });
+}
+
+// Tant que le bouton est maintenu, on répète la commande 10 fois par seconde.
+// Si la page se fige ou perd le réseau, les envois cessent et le lisseur de
+// vitesse de Nav2 arrête le robot de lui-même au bout de 1 s (velocity_timeout).
+function piloter(sensLin, sensAng) {
+  arreterPilotage();
+  if (sensLin === 0 && sensAng === 0) return;   // bouton ■
+  mouvement = { lin: sensLin * VITESSE_LINEAIRE, ang: sensAng * VITESSE_ROTATION };
+  publierVitesse(mouvement.lin, mouvement.ang);
+  minuterieMouvement = setInterval(() => publierVitesse(mouvement.lin, mouvement.ang), 100);
+}
+
+function arreterPilotage() {
+  if (minuterieMouvement) clearInterval(minuterieMouvement);
+  minuterieMouvement = null;
+  if (mouvement) publierVitesse(0, 0);
+  mouvement = null;
+  document.querySelectorAll(".pave button").forEach((b) => b.classList.remove("actif"));
+}
+
+// Le pilotage manuel n'est permis qu'au repos, pour ne pas contredire Nav2.
+function pilotageAutorise() {
+  return etat.mode === "VEILLE" || etat.mode === "ECHEC";
+}
+function majPilotage() {
+  const ok = pilotageAutorise();
+  document.querySelectorAll(".pave button").forEach((b) => { b.disabled = !ok; });
+  $("info-pilotage").textContent = ok
+    ? "Maintenir appuyé (ou flèches du clavier)"
+    : "Disponible quand le robot est en veille";
+  if (!ok) arreterPilotage();
+}
+
+document.querySelectorAll(".pave button").forEach((bouton) => {
+  bouton.addEventListener("pointerdown", (e) => {
+    bouton.setPointerCapture(e.pointerId);
+    bouton.classList.add("actif");
+    piloter(Number(bouton.dataset.lin), Number(bouton.dataset.ang));
+  });
+  for (const fin of ["pointerup", "pointercancel", "lostpointercapture"]) {
+    bouton.addEventListener(fin, arreterPilotage);
+  }
+});
+
+// Flèches du clavier (sauf pendant la saisie d'un nom de point).
+const TOUCHES = { ArrowUp: [1, 0], ArrowDown: [-1, 0], ArrowLeft: [0, 1], ArrowRight: [0, -1] };
+document.addEventListener("keydown", (e) => {
+  const sens = TOUCHES[e.key];
+  if (!sens || e.repeat || ["INPUT", "SELECT"].includes(document.activeElement.tagName)) return;
+  if (!pilotageAutorise() || document.body.classList.contains("deconnecte")) return;
+  e.preventDefault();
+  piloter(sens[0], sens[1]);
+});
+document.addEventListener("keyup", (e) => { if (TOUCHES[e.key]) arreterPilotage(); });
+window.addEventListener("blur", arreterPilotage);   // fenêtre quittée : on arrête
+
 // ===== Boutons de mode =======================================================
 $("btn-patrouille").addEventListener("click", () => envoyer("patrouille"));
 $("btn-base").addEventListener("click", () => envoyer("base"));
@@ -751,6 +845,7 @@ function journal(texte, erreur = false) {
 }
 
 afficherPoints();
+majPilotage();   // désactivé tant que l'état du robot n'est pas connu
 connecter();
 </script>
 </body>

@@ -177,3 +177,12 @@ sur sa position, glisser vers où il regarde) **dans les 60 s** après le lancem
   et ses points (`maps/<nom>_points.yaml`, créé vide s'il n'existe pas) sont chargés,
   puis il faut replacer le robot. Commande équivalente : `carte <nom>`.
   Au prochain lancement, c'est la carte `carte:=` (par défaut `arene`) qui est chargée.
+
+## Cartographie depuis la page web (en cours)
+
+1. **Pilotage manuel** (non testé) : carte « Pilotage manuel » de la page, maintenir
+   ▲ ▼ ◀ ▶ (ou les flèches du clavier). Seulement en veille. Vitesses : 0,2 m/s et
+   0,8 rad/s. Publie sur `/cmd_vel_nav`, donc passe par `collision_monitor` (le robot
+   ralentit puis s'arrête devant un obstacle). Bouton relâché ou page figée : arrêt.
+2. Basculer en mode cartographie (SLAM Toolbox) : à venir.
+3. Enregistrer la carte et revenir en navigation : à venir.
