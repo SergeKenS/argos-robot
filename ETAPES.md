@@ -123,6 +123,9 @@ Mesurer sur le Pi : `ros2 topic hz /cmd_vel_nav`, `htop`, `vcgencmd measure_temp
 - **Exploration automatique** : le robot cartographie seul les zones inconnues
   (paquets du type `m-explore`, compatibilité Jazzy non vérifiée). Reportée : ajouter
   des fonctions seulement quand le robot réel marche, pour garder le débogage simple.
+- **Démarrage automatique de la navigation** au premier placement du robot
+  (navigation lancée avec `autostart: false`, puis STARTUP par le répartiteur) : plus
+  de délai de 5 min ni de bouton « Redémarrer la navigation » à presser dans ce cas.
 
 ## Étape 6 : Page web ✔
 
