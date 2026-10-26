@@ -112,3 +112,11 @@ Allègements dans `config/nav2_params.yaml` (lignes marquées « ARGOS ») :
 
 Mesurer sur le Pi : `ros2 topic hz /cmd_vel_nav`, `htop`, `vcgencmd measure_temp`,
 `vcgencmd get_throttled` (≠ 0x0 = le Pi ralentit à cause de la chaleur).
+
+### Pistes notées (non appliquées)
+
+- **Contrôleur Regulated Pure Pursuit au lieu de MPPI.** Observé : « Optimizer fail
+  to compute path » dans les passages étroits → manœuvres de secours → nouveau chemin.
+  RPP suit le chemin tracé, calcule beaucoup moins (bon pour le Pi), mais contourne
+  moins bien un obstacle imprévu. Changement : un bloc dans `config/nav2_params.yaml`.
+  À appliquer seulement si le besoin se confirme.
