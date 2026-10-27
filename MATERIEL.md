@@ -25,6 +25,20 @@ Pourquoi cette carte : le firmware `linorobot2_hardware` la gère déjà (`gendr
 elle remplace 3 achats (ESP32, pilote moteur, IMU) et beaucoup de câblage.
 Ton ESP32 DevKit actuel n'est alors pas utilisé.
 
+### Kit d'apprentissage avec ton ESP32 DevKit (facultatif)
+
+Pour refaire à la main, sur une plaque d'essai, ce que la carte Waveshare fait déjà :
+mêmes rôles, composants courants, tous gérés par `linorobot2_hardware`.
+
+| Article | Qté | Rôle | Prix estimé |
+|---|---|---|---|
+| Module pilote moteur **TB6612FNG** | 1 | Même puce que la Waveshare (2 moteurs) | ~5-10 $ CAD |
+| Module IMU **MPU6050** (I²C) | 1 | IMU simple et très documentée | ~5 $ CAD |
+| Plaque d'essai (breadboard) + fils Dupont | 1 lot | Câblage sans soudure | ~10-15 $ CAD |
+
+Les essais se font avec un des deux moteurs JGB37-520 de la base roulante.
+Le TB6612FNG a une broche STBY à relier au 3,3 V pour qu'il fonctionne.
+
 ## Base roulante
 
 | Article | Qté | Rôle | Prix estimé |
@@ -58,7 +72,8 @@ L'IMU est déjà sur la carte Waveshare.
 
 ## Total estimé
 
-**Environ 550 à 650 $ CAD**, selon le Pi (4 ou 8 Go) et la livraison.
+**Environ 550 à 650 $ CAD**, selon le Pi (4 ou 8 Go) et la livraison, plus
+~20-30 $ CAD pour le kit d'apprentissage.
 
 ## À vérifier avant de commander
 
