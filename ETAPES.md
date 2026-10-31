@@ -130,6 +130,10 @@ Mesurer sur le Pi : `ros2 topic hz /cmd_vel_nav`, `htop`, `vcgencmd measure_temp
   entraîné sur COCO (~80 objets : pomme, personne, tasse...). Quelques images/s sur le
   processeur du Pi (non mesuré). Suivi d'objet lent possible : direction donnée par la
   caméra, distance par le LiDAR. Plus rapide plus tard : accélérateur (Hailo, OAK-D).
+  Optimisations retenues (à mesurer une par une sur le Pi, avec `htop`) : modèle
+  « nano », image réduite (ex. 320 × 320), quantification INT8 + moteur ARM (NCNN ou
+  TFLite), détection espacée + traceur OpenCV entre deux, suivi de couleur si suffisant.
+  Nœud de vision démarré seulement quand on en a besoin (futur mode SUIVI).
 
 ## Étape 6 : Page web ✔
 
