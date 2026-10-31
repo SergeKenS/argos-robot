@@ -126,6 +126,10 @@ Mesurer sur le Pi : `ros2 topic hz /cmd_vel_nav`, `htop`, `vcgencmd measure_temp
 - **Démarrage automatique de la navigation** au premier placement du robot
   (navigation lancée avec `autostart: false`, puis STARTUP par le répartiteur) : plus
   de délai de 5 min ni de bouton « Redémarrer la navigation » à presser dans ce cas.
+- **Vision : webcam USB** (~30-50 $, pilote ROS 2 `v4l2_camera`) + modèle d'IA déjà
+  entraîné sur COCO (~80 objets : pomme, personne, tasse...). Quelques images/s sur le
+  processeur du Pi (non mesuré). Suivi d'objet lent possible : direction donnée par la
+  caméra, distance par le LiDAR. Plus rapide plus tard : accélérateur (Hailo, OAK-D).
 
 ## Étape 6 : Page web ✔
 
