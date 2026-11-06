@@ -2,3 +2,6 @@
 build/
 install/
 log/
+
+# Factures (adresse personnelle) : gardées hors du dépôt public
+Spec_Materiel/Facture/

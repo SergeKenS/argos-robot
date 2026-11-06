@@ -134,6 +134,10 @@ Mesurer sur le Pi : `ros2 topic hz /cmd_vel_nav`, `htop`, `vcgencmd measure_temp
   « nano », image réduite (ex. 320 × 320), quantification INT8 + moteur ARM (NCNN ou
   TFLite), détection espacée + traceur OpenCV entre deux, suivi de couleur si suffisant.
   Nœud de vision démarré seulement quand on en a besoin (futur mode SUIVI).
+  Périmètre décidé : reconnaître des objets, suivre un objet ou une personne (tourelle
+  2 axes, servos pilotés par l'ESP32 ou l'Arduino, alimentés par un 5 V séparé), image
+  en direct sur la page web (`web_video_server`, port 8080 par défaut : à changer, déjà
+  pris par la page). Écarté : reconnaissance de visages. Plus tard : détection de chute.
 
 ## Étape 6 : Page web ✔
 
