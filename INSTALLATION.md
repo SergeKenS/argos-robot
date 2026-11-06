@@ -11,6 +11,28 @@ Télécharger « Ubuntu 24.04 LTS Desktop » : https://ubuntu.com/download/deskt
 Créer une clé USB d'installation (sous Windows : Rufus, https://rufus.ie), démarrer
 dessus, installer.
 
+## 1b. Pilote NVIDIA (PC portable HP, GTX 1650)
+
+Sans lui, Gazebo calcule l'image sur le processeur : simulation à 30-40 % du temps
+réel (RTF), le robot roule 2 à 3 fois trop lentement. Avec : RTF 99-100 %.
+
+```
+sudo apt install nvidia-driver-580
+sudo reboot
+```
+Secure Boot activé : l'installation demande un mot de passe (chiffres et minuscules,
+le clavier peut être en QWERTY au redémarrage). Au redémarrage, écran bleu « MOK » :
+Enroll MOK, Continue, Yes, mot de passe, Reboot. Ne pas désactiver le Secure Boot
+dans le BIOS (BitLocker de Windows pourrait demander sa clé).
+
+Puis faire tout passer par la carte NVIDIA (sinon Gazebo reste sur la carte Intel) :
+```
+sudo prime-select nvidia
+sudo reboot
+```
+Vérifier : `nvidia-smi` liste la carte, et les processus `gz` / `ruby` pendant la
+simulation.
+
 ## 2. ROS 2 Jazzy
 
 ```

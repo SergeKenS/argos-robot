@@ -231,3 +231,5 @@ Voir le monde seul (sans robot) : `gz sim src/argos_mission/worlds/warehouse.sdf
 `argos.launch.py` lance maintenant ce monde (robot en (0, 0)) à la place de
 `tb3_sandbox`. La carte `arene` ne correspond plus : en créer une nouvelle depuis la
 page (« Nouvelle carte », puis « Enregistrer »), puis la lancer avec `carte:=<nom>`.
+Testé 2026-11-06 : RTF 99-100 % une fois le pilote NVIDIA installé (INSTALLATION.md, 1b),
+pilotage manuel à 0,5 m/s confirmé.
