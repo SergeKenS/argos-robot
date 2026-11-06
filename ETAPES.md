@@ -220,3 +220,12 @@ Si le robot n'a pas été placé dans les 5 min, Nav2 abandonne son démarrage e
 toute destination. Sans rien relancer : placer le robot, puis bouton **Redémarrer la
 navigation** (Réglages), ou commande `redemarrer_navigation`. Le répartiteur configure
 puis active un par un les serveurs de navigation restés arrêtés.
+
+## Monde plus grand : entrepôt (en cours)
+
+`tb3_sandbox` est trop petit pour une grande carte (la carte ne peut pas dépasser le
+monde simulé). Monde retenu : `src/argos_mission/worlds/warehouse.sdf`, entrepôt
+d'environ 27 x 45 m copié de turtlebot4_simulator (jazzy), avec les plugins LiDAR et
+IMU ajoutés. Internet requis au premier lancement (modèles Gazebo Fuel).
+Voir le monde seul (sans robot) : `gz sim src/argos_mission/worlds/warehouse.sdf`.
+Reste : l'installer (setup.py) et le lancer depuis argos.launch.py.
