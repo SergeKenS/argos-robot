@@ -4,7 +4,7 @@
   ros2 launch argos_mission argos.launch.py carte:=arene rviz:=false gazebo_gui:=false
 
 Contenu (repris des fichiers de lancement de nav2_bringup, branche jazzy, réduits) :
-  1. Simulation : Gazebo + TurtleBot3 (à remplacer par les pilotes sur le vrai robot)
+  1. Simulation : Gazebo (monde entrepôt) + TurtleBot3 (à remplacer par les pilotes sur le vrai robot)
   2. Localisation : map_server + AMCL (localization_launch.py de Nav2, inclus tel quel)
      + SLAM Toolbox à l'arrêt, démarré seulement pour créer une carte
   3. Navigation : seulement les serveurs utiles, tous dans un seul processus.
@@ -15,14 +15,12 @@ Contenu (repris des fichiers de lancement de nav2_bringup, branche jazzy, rédui
 Une carte « X » = maps/X.yaml (+ X.pgm) et ses points maps/X_points.yaml.
 """
 import os
-import tempfile
 
 from ament_index_python.packages import get_package_share_directory
 from launch import LaunchDescription
 from launch.actions import (DeclareLaunchArgument, ExecuteProcess, GroupAction,
-                            IncludeLaunchDescription, OpaqueFunction, RegisterEventHandler)
+                            IncludeLaunchDescription)
 from launch.conditions import IfCondition
-from launch.event_handlers import OnShutdown
 from launch.launch_description_sources import PythonLaunchDescriptionSource
 from launch.substitutions import LaunchConfiguration, PathJoinSubstitution
 from launch_ros.actions import LoadComposableNodes, Node, SetParameter
@@ -70,26 +68,22 @@ def generate_launch_description():
     params_nav2 = ParameterFile(params, allow_substs=True)
 
     # --- 1. Simulation (repris de tb3_simulation_launch.py) ---------------------
-    # Le monde est un fichier xacro : on le convertit dans un fichier temporaire.
-    monde = tempfile.mktemp(prefix='argos_', suffix='.sdf')
-    conversion_monde = ExecuteProcess(cmd=[
-        'xacro', '-o', monde, 'headless:=false',
-        os.path.join(dossier_sim, 'worlds', 'tb3_sandbox.sdf.xacro')])
+    # Monde : entrepôt d'environ 27 x 45 m (worlds/warehouse.sdf de ce paquet).
+    monde = os.path.join(dossier_argos, 'worlds', 'warehouse.sdf')
     gazebo = ExecuteProcess(cmd=['gz', 'sim', '-r', '-s', monde], output='screen')
-    nettoyage_monde = RegisterEventHandler(OnShutdown(
-        on_shutdown=[OpaqueFunction(function=lambda _: os.remove(monde))]))
     fenetre_gazebo = IncludeLaunchDescription(
         PythonLaunchDescriptionSource(os.path.join(
             get_package_share_directory('ros_gz_sim'), 'launch', 'gz_sim.launch.py')),
         condition=IfCondition(gazebo_gui),
         launch_arguments={'gz_args': '-v4 -g '}.items())
-    # Le robot apparaît au point (-2, -0.5) du monde, qui est l'origine de nos cartes.
+    # Le robot apparaît au point (0, 0) de l'entrepôt (zone libre), qui devient
+    # l'origine des cartes créées dans ce monde.
     robot_sim = IncludeLaunchDescription(
         PythonLaunchDescriptionSource(os.path.join(dossier_sim, 'launch', 'spawn_tb3.launch.py')),
         launch_arguments={
             'use_sim_time': 'true', 'robot_name': 'turtlebot3_waffle',
             'robot_sdf': os.path.join(dossier_sim, 'urdf', 'gz_waffle.sdf.xacro'),
-            'x_pose': '-2.00', 'y_pose': '-0.50', 'z_pose': '0.01',
+            'x_pose': '0.00', 'y_pose': '0.00', 'z_pose': '0.01',
             'roll': '0.00', 'pitch': '0.00', 'yaw': '0.00',
         }.items())
     with open(os.path.join(dossier_sim, 'urdf', 'turtlebot3_waffle.urdf')) as fichier:
@@ -154,7 +148,7 @@ def generate_launch_description():
         launch_arguments={'use_sim_time': 'true'}.items())
 
     return LaunchDescription(arguments + [
-        conversion_monde, nettoyage_monde, robot_sim, gazebo, fenetre_gazebo, etat_robot,
+        robot_sim, gazebo, fenetre_gazebo, etat_robot,
         conteneur, localisation, slam, navigation,
         repartiteur, page_web, outil_rviz,
     ])

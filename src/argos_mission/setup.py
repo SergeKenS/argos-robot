@@ -14,6 +14,8 @@ setup(
         ('share/' + package_name + '/config',
             ['config/points.yaml', 'config/nav2_params.yaml']),
         ('share/' + package_name + '/launch', ['launch/argos.launch.py']),
+        # Monde Gazebo de la simulation (lu par argos.launch.py)
+        ('share/' + package_name + '/worlds', ['worlds/warehouse.sdf']),
     ],
     install_requires=['setuptools'],
     zip_safe=True,
