@@ -767,8 +767,10 @@ $("btn-ajout-clic").addEventListener("click", () => {
 });
 
 // ===== Pilotage manuel =======================================================
-// Vitesses modérées : le robot reste facile à contrôler depuis un téléphone.
-const VITESSE_LINEAIRE = 0.2;   // m/s
+// Vitesse linéaire = maximum du lisseur de vitesse de Nav2 (nav2_params.yaml),
+// pour cartographier vite une grande surface. Rotation modérée : SLAM dessine
+// une carte plus nette quand le robot tourne lentement.
+const VITESSE_LINEAIRE = 0.5;   // m/s
 const VITESSE_ROTATION = 0.8;   // rad/s
 let mouvement = null;           // {lin, ang} pendant qu'un bouton est maintenu
 let minuterieMouvement = null;

@@ -195,7 +195,7 @@ sur sa position, glisser vers où il regarde). Délai : 5 min (`initial_transfor
 ## Cartographie depuis la page web
 
 1. **Pilotage manuel** ✔ : carte « Pilotage manuel » de la page, maintenir
-   ▲ ▼ ◀ ▶ (ou les flèches du clavier). Seulement en veille. Vitesses : 0,2 m/s et
+   ▲ ▼ ◀ ▶ (ou les flèches du clavier). Seulement en veille. Vitesses : 0,5 m/s et
    0,8 rad/s. Publie sur `/cmd_vel_nav`, donc passe par `collision_monitor` (le robot
    ralentit puis s'arrête devant un obstacle). Bouton relâché ou page figée : arrêt.
 2. **Nouvelle carte** ✔ : bouton « Nouvelle carte » (commande `cartographier`).
