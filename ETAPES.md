@@ -6,9 +6,8 @@ source /opt/ros/jazzy/setup.bash
 ```
 
 ## Installation (une seule fois)
-```
-sudo apt install ros-jazzy-nav2-bringup ros-jazzy-navigation2 ros-jazzy-key-teleop
-```
+
+Voir `INSTALLATION.md` : PC neuf ou réinstallé (Ubuntu, ROS 2, Gazebo, projet).
 
 ## Étape 1 : Piloter le robot au clavier ✔
 
