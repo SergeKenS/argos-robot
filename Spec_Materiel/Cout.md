@@ -10,8 +10,8 @@ Factures : dossier `Facture/`.
 
 | Date | Article | Vendeur | Prix | Livraison | Taxes | Total | État |
 |---|---|---|---|---|---|---|---|
-| ? | Raspberry Pi 5 8 Go (250,00) + boîtier HighPi Pro 5S, sans ventilateur (14,45) | PiShop.ca (commande 267909) | 264,45 | 13,92 | 41,68 | 320,05 | Commandé |
-| 2026-11-02 | Active Cooler (7,15) + microSD Raspberry Pi 128 Go A2 (52,95), ajoutés à la commande 267909 | PiShop.ca (commande 267970) | 60,10 | 0,00 (code add-to-order-fs) | 9,00 | 69,10 | Commandé |
+| ? | Raspberry Pi 5 8 Go (250,00) + boîtier HighPi Pro 5S, sans ventilateur (14,45) | PiShop.ca (commande 267909) | 264,45 | 13,92 | 41,68 | 320,05 | Reçu |
+| 2026-11-02 | Active Cooler (7,15) + microSD Raspberry Pi 128 Go A2 (52,95), ajoutés à la commande 267909 | PiShop.ca (commande 267970) | 60,10 | 0,00 (code add-to-order-fs) | 9,00 | 69,10 | Reçu |
 | 2026-11-01 | Châssis Yahboom 2WD avec batterie : 2 moteurs 520 à encodeur (12 V, 1:40, 300 tr/min), cadre aluminium, roues 65 mm, 2 roulettes, batterie 12 V 4 400 mAh + chargeur 12 V 2 A, carte MSPM0 + carte d'extension + module pilote 4 moteurs à encodeur | Amazon.ca, Yahboom (commande 701-2265577-0645842) | 119,00 | 0,00 | 0,00 | 119,00 | Commandé |
 | 2026-11-01 | Tourelle Yahboom 2DOF Basic : caméra USB 2 MP, 2 servos YB-SG90, lumière LED | Amazon.ca, Yahboom (même commande) | 54,63 | 20,00 | 0,00 | 74,63 | Commandé |
 | 2026-11-02 | LiDAR Slamtec RPLIDAR C1 (avec adaptateur USB) | Amazon.ca, Waveshare (commande 701-0972199-2561864) | 93,99 | 0,00 (gratuite) | 14,08 | 108,07 | Commandé |
