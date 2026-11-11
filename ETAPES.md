@@ -137,6 +137,17 @@ Mesurer sur le Pi : `ros2 topic hz /cmd_vel_nav`, `htop`, `vcgencmd measure_temp
   2 axes, servos pilotés par l'ESP32 ou l'Arduino, alimentés par un 5 V séparé), image
   en direct sur la page web (`web_video_server`, port 8080 par défaut : à changer, déjà
   pris par la page). Écarté : reconnaissance de visages. Plus tard : détection de chute.
+  Mode SUIVI, précisé le 2026-11-10 après l'essai `essais/tourelle/` : la couleur à
+  suivre se choisit dans une palette de carreaux sur la page, envoyée par son nom
+  (commande « suivre rouge »). Chaque nom correspond à une plage HSV rangée dans un
+  YAML, mesurée sur de vrais objets sous l'éclairage du bâtiment (la couleur à l'écran
+  n'est pas celle que voit la caméra). Peu de couleurs bien séparées (ex. rouge, vert,
+  bleu, jaune) ; éviter orange, rose, marron, proches de la peau. Déplacement par Nav2 (arbre « follow point » :
+  but mis à jour en continu, arrêt à 1 m), jamais de vitesses envoyées directement aux
+  moteurs. Tourelle commandée par un topic ROS (micro-ROS sur l'ESP32) au lieu du
+  protocole texte de l'essai ; garder la limite d'environ 25 ordres/s. Vérifier qu'il
+  reste 2 broches libres pour les servos sur la carte du robot. Ordre : couleur, puis
+  personne (modèle COCO), visage seulement si la décision change.
 
 ## Étape 6 : Page web ✔
 
