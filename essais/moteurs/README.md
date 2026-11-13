@@ -180,3 +180,14 @@ ros2 run argos_base pont_moteurs --ros-args --params-file ~/Documents/Projet/arg
    - Cause : mécanique (présent moteur coupé, une fois par tour de roue et non 40
      fois, donc côté roue ou sortie du réducteur). À localiser : trace de
      frottement, support du moteur trop serré, puis roue retirée.
+   - Contrôlé : la roue ne frotte sur rien. Piste : réducteur ou axe de sortie.
+   - Pleine vitesse (roues en l'air, paliers de 3 s) : les deux roues tiennent la
+     consigne à 2 % jusqu'à 700 mm/s ; au-delà, la gauche plafonne plus bas
+     (900 → 779 mm/s ; maximum gauche 842, droite 910 mm/s). Le Pi est resté à
+     5,057 V au moins, sans manque de courant (`get_throttled` 0x0).
+   - Limite de la mesure : au-delà d'environ 500 mm/s, la vitesse par position dans
+     le tour n'est plus fiable (fenêtres trop grossières à 5 tours/s).
+   - Prochain test : inverser les moteurs sur la carte (gauche sur Motor 3). Si le
+     défaut suit le moteur : moteur ou réducteur, échange à demander à Yahboom.
+   - Impact : faible à 0,3 à 0,5 m/s (vitesse prévue en intérieur), compensé par
+     l'asservissement ; léger zigzag, corrigé par Nav2 avec le LiDAR.
