@@ -167,3 +167,16 @@ ros2 run argos_base pont_moteurs --ros-args --params-file ~/Documents/Projet/arg
    - Solution : pause de 0,5 s après l'ouverture, et nouvelle demande si aucun
      compteur n'arrive pendant 1 s (couvre aussi un redémarrage de la carte).
      Test automatique ajouté.
+5. **Point dur une fois par tour de roue** (en cours de diagnostic).
+   - Symptôme : vu par l'utilisateur pendant l'essai de 5 m (roues en l'air) : la
+     roue gauche ralentit toujours au même endroit du tour. Ressenti aussi en la
+     tournant à la main, moteurs coupés.
+   - Mesures : vitesse de chaque roue selon sa position dans le tour (encodeurs,
+     environ 250 relevés/s, consigne 150 mm/s, 15 s) : roue gauche environ -40 % dans
+     un secteur précis, roue droite environ -25 % dans un autre. Le cap du robot
+     oscillait de -12° à +10° pendant les 5 m.
+   - Leçon : la moyenne sur 4 s (environ 3 tours) cachait le défaut. L'observation
+     à l'œil l'a trouvé ; la mesure par position dans le tour l'a confirmé.
+   - Cause : mécanique (présent moteur coupé, une fois par tour de roue et non 40
+     fois, donc côté roue ou sortie du réducteur). À localiser : trace de
+     frottement, support du moteur trop serré, puis roue retirée.
