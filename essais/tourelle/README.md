@@ -88,6 +88,17 @@ sont marqués OBSOLÈTE : à supprimer au nettoyage, une fois l'essai 4 validé 
 - Recherche testée (objet masqué 12 s) : balayage, pause, 2e balayage, objet
   retrouvé au bord de l'image puis recentré en moins de 1 s
 
+## Sur le Raspberry Pi (2026-11-13)
+
+`python3 suivi_fluide.py --camera 0 --sans-fenetre`, la vision tourne sur le Pi
+(architecture du robot final), l'ESP32 et la caméra branchés en USB sur le Pi, le
+tout sur la batterie du robot et le convertisseur 12 V vers 5 V.
+- Balle tenue à la main pendant 5 min : 30 images analysées par seconde en
+  moyenne (27 au plus bas), écart au centre de quelques pixels à l'arrêt.
+- 10 pertes de la balle (cachée exprès) : recherche en 8 lancée, balle retrouvée 9 fois.
+- Processeur : 45 % d'un cœur (environ 11 % du Pi), 53 °C.
+- Alimentation : voir `essais/alimentation/` (tension jamais sous 4,999 V).
+
 ## Problèmes rencontrés
 
 Les deux qui bloquaient tout (la tourelle tournait « au hasard ») :

@@ -25,8 +25,7 @@ depuis la batterie du robot, avant de tout assembler.
    le Pi voit 5 000 mA, `usb_max_current_enable=1` (1,6 A pour l'USB).
    Commande : `sudo rpi-eeprom-config --apply <fichier>` puis redémarrage ; ancienne
    configuration gardée dans `~/argos_claude/eeprom_avant_psu.txt` sur le Pi.
-   Reste à valider par une mesure en charge réelle : tourelle (caméra + ESP32 +
-   servos) et processeur ensemble, puis avec le LiDAR.
+   ✔ Validé avec la tourelle (voir Mesures) ; à refaire avec le LiDAR.
 6. Autonomie : batterie chargée à fond, Pi en charge, jusqu'à la coupure
 
 ## Mesures (2026-11-13)
@@ -53,6 +52,11 @@ depuis la batterie du robot, avant de tout assembler.
 
   Le processeur seul ne tire qu'une partie des 5 A : la limite de 5 A n'est donc pas
   encore prouvée.
+- Charge réelle, après `PSU_MAX_CURRENT=5000` : tourelle sur le Pi (caméra USB +
+  ESP32 + deux servos alimentés par l'USB du Pi), suivi de la balle tenue à la main
+  pendant 5 min, avec 10 recherches en 8. Tension relevée chaque seconde
+  (309 relevés) : **min 4,999 V, moyenne 5,050 V, max 5,070 V**, aucun manque de
+  courant (`get_throttled` 0x0), aucune coupure USB dans le journal du noyau.
 
 ## Règles de sécurité
 
@@ -79,8 +83,9 @@ depuis la batterie du robot, avant de tout assembler.
    - Solution : `PSU_MAX_CURRENT=5000` dans la configuration du chargeur de démarrage
      (`sudo rpi-eeprom-config --apply <fichier>`, puis redémarrage). Le Pi voit alors
      5 000 mA, active `usb_max_current_enable=1` et accorde 1,6 A à ses ports USB.
-     Justifié parce que le convertisseur est donné pour 5 A et que la tension a tenu
-     à 5,00 V sous effort ; reste à le confirmer en charge réelle (tourelle, LiDAR).
+     Justifié parce que le convertisseur est donné pour 5 A, et vérifié en charge
+     réelle : tourelle en mouvement pendant 5 min, tension jamais sous 4,999 V,
+     aucune coupure. À revérifier quand le LiDAR s'ajoutera.
    - À savoir : ce réglage dit au Pi de faire confiance à l'alimentation. Sur une
      alimentation qui ne tient pas vraiment 5 A, il ne faut pas l'utiliser. Retour
      arrière : configuration d'origine gardée dans `~/argos_claude/eeprom_avant_psu.txt`.
