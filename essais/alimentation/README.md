@@ -21,9 +21,12 @@ depuis la batterie du robot, avant de tout assembler.
 3. ✔ Tension de sortie, mesurée sur un ESP32 (voir Mesures)
 4. ✔ Pi sur le convertisseur : tension au repos et sous effort, `get_throttled`
 5. Le convertisseur n'annonce pas 5 A au Pi (pas d'USB Power Delivery) : le Pi
-   limite ses ports USB à 600 mA. Régler `PSU_MAX_CURRENT=5000` dans son chargeur
-   de démarrage au moment du LiDAR, et le valider par une mesure avec LiDAR, caméra
-   et processeur chargés ensemble (la vraie charge du robot).
+   limitait ses ports USB à 600 mA. ✔ `PSU_MAX_CURRENT=5000` réglé (2026-11-13) :
+   le Pi voit 5 000 mA, `usb_max_current_enable=1` (1,6 A pour l'USB).
+   Commande : `sudo rpi-eeprom-config --apply <fichier>` puis redémarrage ; ancienne
+   configuration gardée dans `~/argos_claude/eeprom_avant_psu.txt` sur le Pi.
+   Reste à valider par une mesure en charge réelle : tourelle (caméra + ESP32 +
+   servos) et processeur ensemble, puis avec le LiDAR.
 6. Autonomie : batterie chargée à fond, Pi en charge, jusqu'à la coupure
 
 ## Mesures (2026-11-13)

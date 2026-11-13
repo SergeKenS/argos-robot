@@ -31,20 +31,22 @@ fonctions nouvelles avant que le robot réel roule. Architecture : `ARCHITECTURE
 | Tourelle (`essais/tourelle/`) | Tester la prédiction, balle tenue à la main, recherche en 8 | Suivi validé à la main, mesures dans le README |
 | Pi 5 (`essais/raspberry/`) | Bloqué : lecteur microSD à acheter. Puis Ubuntu, SSH, ROS 2 Jazzy | `ros2 topic list` du Pi vu depuis le PC |
 | LiDAR C1 | Sur le Pi, avec `rplidar_ros` | `/scan` affiché dans RViz sur le PC |
-| Moteurs et encodeurs | **Décision à prendre à la réception du châssis** (voir plus bas) | Robot sur cales : `cmd_vel` obéi, `/odom` juste à 5 % sur 1 m |
-| Alimentation | Convertisseur 12 V vers 5 V, arrêt d'urgence, autonomie | Pi + LiDAR + moteurs sans redémarrage du Pi ; l'arrêt d'urgence coupe les moteurs |
+| Moteurs et encodeurs (`essais/moteurs/`) | Carte YB-ESF01 retenue (voir plus bas) : protocole, sens des roues, encodeurs | Robot sur cales : `cmd_vel` obéi, `/odom` juste à 5 % sur 1 m |
+| Alimentation (`essais/alimentation/`) | Pi sur batterie ✔ ; reste : charge réelle (tourelle, puis LiDAR), arrêt d'urgence, autonomie | Pi + LiDAR + moteurs sans redémarrage du Pi ; l'arrêt d'urgence coupe les moteurs |
 
-**Décision moteurs.** `MATERIEL.md` prévoyait un ESP32 avec `linorobot2_hardware`.
-Le châssis Yahboom acheté arrive avec une carte MSPM0 et un module pilote 4 moteurs
-à encodeur (`Spec_Materiel/Cout.md`). Deux voies :
-- garder l'idée de départ : un ESP32 pilote les moteurs et publie l'odométrie
-  (micro-ROS), avec un pont en H si le module Yahboom ne se commande pas simplement ;
-- utiliser le module Yahboom tel quel, s'il offre une liaison série documentée.
-
-Critère de choix : la voie qui donne `cmd_vel` et `/odom` en ROS 2 Jazzy avec le
-moins de code à nous. Non vérifié : à trancher module en main. Leçon de l'essai
-tourelle, valable dans les deux cas : aucune fonction bloquante dans la boucle du
-microcontrôleur.
+**Décision moteurs (prise le 2026-11-13).** La carte du châssis Yahboom,
+**YB-ESF01 V2.0**, pilote les moteurs : STM32F103 avec son propre programme, quatre
+pilotes de moteur AT8236, quatre entrées d'encodeur, liaison USB-C (CH340) vers le Pi,
+alimentation 5 à 12 V (13 V au maximum ; batterie 12,6 V chargée : OK). Un nœud ROS 2
+sur le Pi traduira `cmd_vel` en vitesses de roues et les encodeurs en `/odom`. L'ESP32
+reste dédié à la tourelle. La carte d'extension MSPM0 du kit ne sert pas.
+Raison : `cmd_vel` et `/odom` avec le moins de code à nous (pilotes et programme de
+la carte déjà faits et réglés pour ces moteurs). À vérifier dans `essais/moteurs/` :
+le protocole exact (non trouvé dans la doc officielle), la précision de l'odométrie,
+le temps de réaction. `MATERIEL.md` (estimation de départ, ESP32 + linorobot2) n'est
+pas modifié.
+Leçon de l'essai tourelle, toujours valable : aucune fonction bloquante dans la
+boucle d'un microcontrôleur, et ne pas inonder la carte d'ordres.
 
 ## Phase 3 : robot réel
 
