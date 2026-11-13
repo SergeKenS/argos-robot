@@ -16,10 +16,11 @@ avant de le mettre sur le robot.
 
 1. ✔ Installer Ubuntu Server 24.04 sans lecteur microSD (voir « Installation »)
 2. ✔ Premier démarrage et connexion SSH depuis le PC
-3. Bases Linux sur le Pi : mises à jour, température, mémoire
-4. Installer ROS 2 Jazzy
-5. Échange ROS 2 entre le PC et le Pi
+3. ✔ Mises à jour du système
+4. ✔ Installer ROS 2 Jazzy (`ros-jazzy-ros-base` + `ros-dev-tools`, rosdep)
+5. ✔ Échange ROS 2 entre le PC et le Pi
 6. Brancher le LiDAR C1 sur le Pi, voir /scan dans RViz sur le PC
+   (après l'essai d'alimentation : les ports USB sont limités à 600 mA en 3 A)
 
 ## Installation (2026-11-13)
 
@@ -52,10 +53,29 @@ Connexion depuis le PC Windows : `ssh -i ~/.ssh/id_ed25519_argos serge@argos-pi.
 - Adresse donnée par la box : 192.168.2.77 (clé), puis 192.168.2.78 (microSD).
   Elle peut changer : utiliser `argos-pi.local`.
 
+## ROS 2 sur le Pi (2026-11-13)
+
+Même méthode qu'`INSTALLATION.md`, mais `ros-jazzy-ros-base` au lieu de `desktop` :
+pas d'écran, donc ni RViz ni outils graphiques (RViz tourne sur le PC). Script
+`~/argos_claude/installer_ros.sh` sur le Pi : 6 minutes, puis un redémarrage.
+201 paquets ROS, `colcon` et `rosdep` présents, `source /opt/ros/jazzy/setup.bash`
+ajouté au `~/.bashrc`.
+
+Vérification : `ros2 topic pub /essai_pi ...` sur le Pi, reçu par
+`ros2 topic echo /essai_pi` sur le Pi **et sur le PC Ubuntu** par le Wi-Fi, sans
+réglage (ROS_DOMAIN_ID 0 des deux côtés).
+Note : `ros2 run demo_nodes_cpp talker` n'existe pas en `ros-base` (paquet de `desktop`).
+
+Attention pour la suite : sur le même réseau et le même ROS_DOMAIN_ID, le Pi et la
+simulation du PC voient les topics l'un de l'autre (deux `/cmd_vel`, deux `/scan`...).
+Quand le robot réel et la simulation tourneront en même temps, donner un
+ROS_DOMAIN_ID différent à la simulation.
+
 ## État
 
-2026-11-13 : étapes 1 et 2 faites. Le Pi tourne sur la microSD, joignable en SSH.
-Prochaine étape : 3 (mises à jour), puis 4 (ROS 2 Jazzy).
+2026-11-13 : étapes 1 à 5 faites. Le Pi tourne sur la microSD, joignable en SSH,
+ROS 2 Jazzy installé et vu depuis le PC. Étape 6 (LiDAR) après l'essai
+d'alimentation (convertisseur 12 V vers 5 V reçu).
 
 ## Problèmes rencontrés
 
