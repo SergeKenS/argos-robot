@@ -27,6 +27,10 @@ Raspberry Pi, et lire les encodeurs, avant d'écrire le nœud ROS 2.
 
 - Moteurs sur **Motor 3** et **Motor 4** (connecteurs 6 broches, avec encodeur).
   Motor 1 et Motor 2 libres.
+- **Motor 3 = roue droite, Motor 4 = roue gauche** (montés en miroir). Vérifié en
+  faisant tourner les moteurs : pour **avancer**, `$spd:0,0,+v,-v#`. Le compteur de
+  la roue gauche est donc aussi à inverser. L'avant du robot est celui choisi par
+  l'utilisateur le 2026-11-13 : le garder pour le LiDAR et la caméra.
 - Alimentation : bornier « DC5V-12V », batterie par épissure commune avec le
   convertisseur du Pi (essai sur table seulement, voir `essais/alimentation/`).
 - USB-C de la carte sur le Pi : `/dev/ttyUSB1` (CH340, identifiant `1a86:7522` ;
@@ -47,8 +51,8 @@ est donc sans risque, tant qu'on n'envoie pas de vitesse non nulle.
 | `$upload:0,0,1#` | `$MSPD:a,b,c,d#` : vitesse de chaque roue (unité à confirmer) | oui |
 | `$upload:0,0,0#` | arrête les envois | oui |
 | `$mphase:40#` | `Set mphase:OK!` : réduction du moteur | oui |
-| `$spd:a,b,c,d#` | aucune réponse (reconnue) : consigne de vitesse, unité à mesurer | à 0 seulement |
-| `$pwm:a,b,c,d#` | aucune réponse (reconnue) : commande directe du moteur | à 0 seulement |
+| `$spd:a,b,c,d#` | aucune réponse : consigne de vitesse en **mm/s**, asservie par la carte | oui |
+| `$pwm:a,b,c,d#` | aucune réponse : commande directe ; `$pwm:0,0,0,0#` = arrêt rapide | à 0 seulement |
 | `$read#`, `$speed:...#` | `fail,Command not found!` | oui |
 
 Configuration lue à la livraison : `Motor_type:1` (520), `Dead_Zone:1600`,
@@ -59,7 +63,11 @@ Configuration lue à la livraison : `Motor_type:1` (520), `Dead_Zone:1600`,
 1. ✔ Câblage vérifié sur photo
 2. ✔ Carte sur USB-C du Pi : elle se présente seule (`Motor_Version:1.7.3`)
 3. ✔ Protocole de lecture et de configuration (tableau ci-dessus).
-   À venir, **roues en l'air** : premiers ordres de vitesse.
+4. ✔ Roues en l'air : sens, précision de vitesse, temps de réponse, arrêt (Mesures)
+5. Vérifier que `Pulse_Phase:40` survit à une coupure d'alimentation
+6. Au sol : 1 m mesuré au mètre contre l'odométrie (5 % attendu), distance d'arrêt
+   avec le poids du robot
+7. Nœud ROS 2 « pont » : `cmd_vel` vers `$spd`, `$MAll` vers `/odom`, chien de garde
 4. Mesures : sens de rotation, impulsions par tour de roue, vitesse obtenue contre
    vitesse demandée, temps de réaction, ordres par seconde acceptés sans retard
 5. Odométrie : 1 m au sol mesuré au mètre, contre l'odométrie (5 % attendu)
@@ -82,6 +90,28 @@ Roues tournées à la main, compteurs `$MAll` enregistrés (aucun moteur aliment
 - Roue mesurée à la règle : **67 mm** (la facture annonçait 65 mm ; la carte
   était déjà réglée sur 67).
 
+Roues en l'air, les deux roues ensemble en marche avant (vitesse réelle calculée
+par les encodeurs sur les 2 dernières secondes de 4 s) :
+
+| Consigne | Droite | Gauche | 90 % atteint en |
+|---|---|---|---|
+| +100 mm/s | 100 mm/s | 100 mm/s | 1,4 s / 1,1 s |
+| +200 mm/s | 204 mm/s | 201 mm/s | 1,1 s / 0,9 s |
+| +300 mm/s | 303 mm/s | 302 mm/s | 0,5 s / 0,3 s |
+| -200 mm/s | -203 mm/s | -206 mm/s | 0,2 s / 0,2 s |
+
+- Précision à vitesse établie : **3 % au plus**, roues égales entre elles. L'unité de
+  `$spd` est bien le mm/s. Au premier essai de 2 s, la roue gauche paraissait plus
+  lente (65 mm/s) : elle accélérait encore.
+- Départ arrêté lent (1,1 à 1,4 s à 100 mm/s) : l'asservissement de la carte monte
+  progressivement. Plus rapide d'une vitesse à une autre.
+- Arrêt, roues en l'air (sans le poids du robot, à refaire au sol) :
+
+  | Ordre d'arrêt | Depuis 200 mm/s | Depuis 300 mm/s |
+  |---|---|---|
+  | `$spd:0,0,0,0#` (asservi) | 60 à 80 mm, roues immobiles après 1,8 s | 115 à 127 mm, 2,5 s |
+  | `$pwm:0,0,0,0#` (direct) | 14 à 23 mm, 0,2 s | 35 à 59 mm, 0,4 s |
+
 ## Problèmes rencontrés
 
 1. **L'article trouvé en ligne ne correspond pas à ce programme.**
@@ -96,3 +126,12 @@ Roues tournées à la main, compteurs `$MAll` enregistrés (aucun moteur aliment
      fausses d'un tiers (33 %).
    - Solution : `$mphase:40#` (réponse `Set mphase:OK!`, relu dans `$read_flash#`).
      À vérifier : le réglage survit-il à une coupure d'alimentation ?
+3. **L'arrêt asservi est lent, et la carte n'a pas de chien de garde.**
+   - Symptôme : après `$spd:0,0,0,0#`, les roues tournent encore jusqu'à 2,5 s et
+     6 à 13 cm. Et une seule consigne suffit : les roues ont tourné 5 s sans autre
+     ordre, la carte garde la dernière vitesse tant qu'on ne lui dit rien.
+   - Risque : si le Pi plante pendant un trajet, le robot continue tout droit.
+   - Solution (pour le nœud ROS 2) : arrêter par `$pwm:0,0,0,0#` (0,2 à 0,4 s,
+     3 fois plus court) ; chien de garde dans le nœud (arrêt si aucun `cmd_vel`
+     depuis 0,5 s) ; et un arrêt d'urgence matériel qui coupe l'alimentation des
+     moteurs, indépendant du logiciel.
