@@ -73,3 +73,14 @@ def test_compteurs_les_plus_recents_meme_coupes_en_morceaux():
     heure, _ = carte.derniers_compteurs()
     assert heure is not None
     carte.fermer()
+
+
+def test_redemande_les_compteurs_si_plus_rien_n_arrive(monkeypatch):
+    # Vu sur le Pi : la première demande, écrite juste après l'ouverture, se perd.
+    monkeypatch.setattr('argos_base.carte_yahboom.DELAI_RELANCE', 0.1)
+    liaison = FausseLiaison()
+    carte = CarteYahboom('inutile', liaison=liaison)
+    assert attendre(lambda: liaison.ecrit.count('$upload:1,0,0#') >= 2)
+    liaison.recevoir('$MAll:0,0,5,-5#\r\n')
+    assert attendre(lambda: carte.derniers_compteurs()[1] == (0, 0, 5, -5))
+    carte.fermer()

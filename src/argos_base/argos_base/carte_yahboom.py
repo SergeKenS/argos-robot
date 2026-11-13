@@ -23,6 +23,10 @@ VID, PID = 0x1A86, 0x7522
 
 MOTIF_COMPTEURS = re.compile(r'\$MAll:(-?\d+),(-?\d+),(-?\d+),(-?\d+)#')
 
+# Plus de compteurs depuis ce temps (s) : on redemande les envois à la carte.
+# Mesuré : la première commande écrite juste après l'ouverture du port se perd.
+DELAI_RELANCE = 1.0
+
 
 def trouver_port():
     """Port série de la carte (ex. /dev/ttyUSB1), reconnue à sa puce USB ; None si absente."""
@@ -59,17 +63,23 @@ class CarteYahboom:
             liaison.dtr = False
             liaison.rts = False
             liaison.open()
+            # Laisse la liaison se stabiliser : une commande écrite tout de suite se perd
+            time.sleep(0.5)
+            liaison.reset_input_buffer()
         self.liaison = liaison
-        self.verrou = threading.Lock()
+        self.verrou = threading.Lock()           # protège les compteurs
+        self.verrou_ecriture = threading.Lock()  # deux fils peuvent écrire
         self.compteurs = None        # derniers compteurs reçus (a, b, c, d)
         self.heure_compteurs = None  # heure de leur réception (time.monotonic)
+        self.derniere_demande = time.monotonic()
         self.actif = True
+        self.envoyer('$upload:1,0,0#')
         self.fil = threading.Thread(target=self._ecouter, daemon=True)
         self.fil.start()
-        self.envoyer('$upload:1,0,0#')
 
     def envoyer(self, texte):
-        self.liaison.write(texte.encode())
+        with self.verrou_ecriture:
+            self.liaison.write(texte.encode())
 
     def vitesses(self, mm_par_seconde):
         """Consigne de vitesse des 4 sorties, en mm/s (entiers)."""
@@ -87,6 +97,13 @@ class CarteYahboom:
     def _ecouter(self):
         tampon = b''
         while self.actif:
+            # Plus rien depuis DELAI_RELANCE : demande perdue ou carte redémarrée
+            maintenant = time.monotonic()
+            dernier = self.heure_compteurs or 0.0
+            if (maintenant - dernier > DELAI_RELANCE
+                    and maintenant - self.derniere_demande > DELAI_RELANCE):
+                self.envoyer('$upload:1,0,0#')
+                self.derniere_demande = maintenant
             try:
                 tampon += self.liaison.read(256)
             except (serial.SerialException, OSError):
