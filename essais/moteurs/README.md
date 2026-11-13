@@ -64,7 +64,7 @@ Configuration lue à la livraison : `Motor_type:1` (520), `Dead_Zone:1600`,
 2. ✔ Carte sur USB-C du Pi : elle se présente seule (`Motor_Version:1.7.3`)
 3. ✔ Protocole de lecture et de configuration (tableau ci-dessus).
 4. ✔ Roues en l'air : sens, précision de vitesse, temps de réponse, arrêt (Mesures)
-5. Vérifier que `Pulse_Phase:40` survit à une coupure d'alimentation
+5. ✔ `Pulse_Phase:40` survit à une coupure d'alimentation (batterie débranchée 10 s)
 6. Au sol : 1 m mesuré au mètre contre l'odométrie (5 % attendu), distance d'arrêt
    avec le poids du robot
 7. Nœud ROS 2 « pont » : `cmd_vel` vers `$spd`, `$MAll` vers `/odom`, chien de garde
@@ -125,7 +125,7 @@ par les encodeurs sur les 2 dernières secondes de 4 s) :
    - Conséquence évitée : la carte aurait calculé des vitesses et des distances
      fausses d'un tiers (33 %).
    - Solution : `$mphase:40#` (réponse `Set mphase:OK!`, relu dans `$read_flash#`).
-     À vérifier : le réglage survit-il à une coupure d'alimentation ?
+     Vérifié : le réglage est gardé après une coupure d'alimentation (mémoire flash).
 3. **L'arrêt asservi est lent, et la carte n'a pas de chien de garde.**
    - Symptôme : après `$spd:0,0,0,0#`, les roues tournent encore jusqu'à 2,5 s et
      6 à 13 cm. Et une seule consigne suffit : les roues ont tourné 5 s sans autre
