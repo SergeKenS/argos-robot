@@ -50,6 +50,28 @@ Dans l'IDE : carte « ESP32 Dev Module », port COM3, série à 115200 bauds.
   Objet perdu 1,5 s : balayage gauche-droite à deux hauteurs, retour au centre,
   pause de 5 s, et on recommence tant qu'il n'est pas retrouvé.
   Ignore les taches rouges fines (fil de servo) : elles remplissent mal leur cercle.
+- `mesure_servo/` : mesure la durée de `servo.write()` (cause de la limite de
+  25 ordres par seconde, voir problème 2)
+- `suivi_fluide/` : essai 4 (en cours), côté ESP32 : signal des servos par
+  MCPWM au lieu d'ESP32Servo, lecture série sans attente, boucle à 50 Hz qui
+  amène la tourelle à la cible avec vitesse et accélération limitées. Reçoit
+  "bas,haut" (décimales permises), renvoie sa position "P,temps_ms,bas,haut".
+  Réglages par le port série : "V,300" (°/s), "A,2000" (°/s²), "G,15".
+  Le côté PC reste à écrire.
+
+## Mesures (2026-11-12, essai 4)
+
+- `servo.write()` d'ESP32Servo : 30 µs si le servo n'a rien reçu depuis 40 ms,
+  sinon il bloque jusqu'à 40 ms (2 périodes du signal 50 Hz)
+- ESP32Servo règle le signal sur 10 bits : 1 cran = 19,5 µs = 1,85°. La
+  tourelle ne pouvait donc se placer que tous les 1,85° (12 à 16 px)
+- `suivi_fluide.ino` : pas de 1 µs (0,1°). 500 ordres par seconde pendant 8 s,
+  puis réaction au dernier ordre en 7 ms : plus de file d'attente
+- Saut de 30° avec le profil (300 °/s, 2000 °/s²) : 0,48 s, aucun dépassement
+- À confirmer (pièce sombre, mesure peu fiable) : l'image suit l'ordre avec
+  environ 0,1 s de retard ; les servos plafonnent vers 380 °/s ; 7,4 px par
+  degré (bas) et 7,1 (haut) ; tourelle immobile, la visée dérive d'environ
+  0,8° en 10 s (zone morte des SG90)
 
 ## Mesures (2026-11-10)
 
@@ -85,6 +107,27 @@ Les deux qui bloquaient tout (la tourelle tournait « au hasard ») :
    - Solution : le PC n'envoie un ordre que quand l'angle change.
    - Pourquoi si long à trouver : les tests courts (3 à 5 s) ne le montrent
      pas, seul un test long l'a révélé.
+   - Cause profonde (2026-11-12) : ni le port série ni la puissance de
+     l'ESP32. Lu dans le pilote PWM de l'ESP32 (LEDC), puis mesuré avec
+     `mesure_servo.ino` : `servo.write()` attend que la consigne précédente
+     soit passée dans le signal, soit jusqu'à 40 ms à 50 Hz. D'où 25 ordres
+     par seconde au plus.
+   - Vraie solution : `suivi_fluide.ino` (MCPWM, changement de consigne
+     immédiat, lecture série sans attente).
+   - Leçon pour le robot : jamais de code bloquant dans la boucle de
+     l'ESP32. Ce n'était pas un manque de puissance : une seule fonction
+     qui attend suffit à tout ralentir.
+
+3. **Les servos ont du jeu** (trouvé le 2026-11-12).
+   - Symptôme : la tourelle s'arrête 2 à 3° à côté de la cible, et la visée
+     dérive toute seule à l'arrêt (0,8° en 10 s).
+   - Diagnostic : balle immobile comme repère, escalier de pas de 0,25°
+     montants puis descendants. Au changement de sens, le servo ne bouge pas
+     tant que la consigne n'a pas reculé de 2,5° (bas) ou 2,2° (haut).
+   - Cause : limite physique des SG90 (zone morte et jeu des engrenages).
+   - Solution : `suivi_fluide.ino` ajoute ce recul lui-même à chaque
+     changement de sens. Écart entre les deux sens : de 1,35° à 0,1° environ.
+     Il reste des pas d'environ 0,4° : d'où la zone morte de 3 px côté PC.
 
 Autres pièges, plus simples :
 
@@ -112,6 +155,16 @@ Autres pièges, plus simples :
   pour le convertisseur 5 V (entrée 8 à 32 V).
 
 ## État
+
+Essai 4 en cours (pause le 2026-11-12 au soir). Sur l'ESP32 : `suivi_fluide.ino`
+avec rattrapage du jeu (testé). `suivi_fluide.py` : première version testée au
+banc ; la version avec prédiction de vitesse est écrite mais PAS ENCORE TESTÉE.
+Outils de mesure dans `banc_mesure/` (`python banc.py fluide` ou `essai3`).
+Mesuré au banc, balle immobile, même détection (essai 3 puis essai 4 sans
+prédiction) : écart au repos 11,9 px puis 0,9 px ; saut de 10° rattrapé sous
+5 px en 0,64 s puis 0,34 s ; cible mobile à 31 °/s, écart 41 px puis 24 px.
+Reste à faire : tester la prédiction, essai avec la balle tenue à la main,
+recherche en 8, noter le problème du jeu des servos ci-dessus.
 
 Essai 3 validé le 2026-11-10 : suivi d'un objet rouge tenu à la main.
 Installé : Python 3.14, `python -m pip install opencv-python pyserial`

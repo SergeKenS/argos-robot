@@ -5,3 +5,6 @@ log/
 
 # Factures (adresse personnelle) : gardées hors du dépôt public
 Spec_Materiel/Facture/
+
+# Fichiers générés par Python
+__pycache__/
