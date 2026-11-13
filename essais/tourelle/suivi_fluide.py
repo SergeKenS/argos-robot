@@ -17,7 +17,12 @@ centre, et recommence tant qu'il n'est pas retrouvé.
 
 Usage : python suivi_fluide.py   (fermer d'abord le moniteur série d'Arduino)
 Quitter : touche q dans la fenêtre de l'image.
+Sur le Raspberry Pi (pas d'écran) :
+  python3 suivi_fluide.py --camera 0 --sans-fenetre
+  Quitter avec Ctrl+C. L'image annotée est enregistrée chaque seconde dans
+  /tmp/tourelle.jpg (pour la regarder depuis le PC).
 """
+import argparse
 import math
 import threading
 import time
@@ -118,13 +123,14 @@ class Camera:
     travaille sur du vieux (le même piège que la file d'ordres de l'essai 3).
     """
 
-    def __init__(self):
-        self.capture = cv2.VideoCapture(CAMERA)
+    def __init__(self, numero=CAMERA):
+        """Ouvre la caméra « numero » (numéro OpenCV) et lance sa lecture en continu."""
+        self.capture = cv2.VideoCapture(numero)
         self.capture.set(cv2.CAP_PROP_FRAME_WIDTH, LARGEUR)
         self.capture.set(cv2.CAP_PROP_FRAME_HEIGHT, HAUTEUR)
         ok, image = self.capture.read()
         if not ok:
-            raise SystemExit(f'Caméra {CAMERA} : aucune image (occupée par un autre programme ?)')
+            raise SystemExit(f'Caméra {numero} : aucune image (occupée par un autre programme ?)')
         if image.shape[:2] != (HAUTEUR, LARGEUR):
             # Les pixels par degré ont été mesurés dans cette taille d'image
             raise SystemExit(f'Image en {image.shape[1]} x {image.shape[0]} au lieu de {LARGEUR} x {HAUTEUR}')
@@ -266,9 +272,29 @@ def recherche(t):
 
 
 def main():
+    arguments = argparse.ArgumentParser(description='Suivi d\'un objet rouge par la tourelle.')
+    arguments.add_argument('--camera', type=int, default=CAMERA,
+                           help=f'numéro OpenCV de la caméra (défaut : {CAMERA})')
+    arguments.add_argument('--sans-fenetre', action='store_true',
+                           help='pas de fenêtre (Raspberry Pi) : image dans /tmp/tourelle.jpg')
+    options = arguments.parse_args()
+
     tourelle = Tourelle()
-    camera = Camera()
+    camera = Camera(options.camera)
     suivi = Suivi()
+    try:
+        boucle(tourelle, camera, suivi, options.sans_fenetre)
+    except KeyboardInterrupt:
+        print('Ctrl+C : arrêt')
+    finally:
+        camera.fermer()
+        tourelle.fermer()
+        if not options.sans_fenetre:
+            cv2.destroyAllWindows()
+
+
+def boucle(tourelle, camera, suivi, sans_fenetre):
+    """Suit l'objet image après image, jusqu'à la touche q (ou Ctrl+C sans fenêtre)."""
 
     cible = (CENTRE_BAS, CENTRE_HAUT)
     numero = 0
@@ -309,17 +335,20 @@ def main():
                 ecart = f'écart {objet[0] - LARGEUR / 2:+6.1f} {objet[1] - HAUTEUR / 2:+6.1f} px'
             else:
                 ecart = 'objet non vu'
-            print(f'vu {vues:2d}/{images} images | {ecart} | bas {cible[0]:6.1f} haut {cible[1]:5.1f}')
+            print(f'vu {vues:2d}/{images} images | {ecart} | bas {cible[0]:6.1f} haut {cible[1]:5.1f}',
+                  flush=True)
             bilan, vues, images = maintenant, 0, 0
+            if sans_fenetre:
+                cv2.drawMarker(image, (LARGEUR // 2, HAUTEUR // 2), (255, 255, 255),
+                               cv2.MARKER_CROSS, 20, 1)
+                cv2.imwrite('/tmp/tourelle.jpg', image)
 
-        cv2.drawMarker(image, (LARGEUR // 2, HAUTEUR // 2), (255, 255, 255), cv2.MARKER_CROSS, 20, 1)
-        cv2.imshow('Camera tourelle', image)
-        if cv2.waitKey(1) & 0xFF in (ord('q'), 27):
-            break
-
-    camera.fermer()
-    tourelle.fermer()
-    cv2.destroyAllWindows()
+        if not sans_fenetre:
+            cv2.drawMarker(image, (LARGEUR // 2, HAUTEUR // 2), (255, 255, 255),
+                           cv2.MARKER_CROSS, 20, 1)
+            cv2.imshow('Camera tourelle', image)
+            if cv2.waitKey(1) & 0xFF in (ord('q'), 27):
+                return
 
 
 if __name__ == '__main__':
