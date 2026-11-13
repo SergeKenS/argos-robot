@@ -1,8 +1,7 @@
 # Architecture
 
-Réorganisation du 2026-11-13. Le code est écrit et couvert par 36 tests
-automatiques sans ROS. **Pas encore validé en simulation** : voir la liste de
-non-régression à la fin.
+Réorganisation du 2026-11-13 : 39 tests automatiques sans ROS, et validée en
+simulation le même jour (liste de non-régression à la fin, 25 vérifications sur 25).
 
 But : ajouter une fonctionnalité (Suivi, Observation...) sans toucher aux autres.
 
@@ -149,17 +148,50 @@ Marqués « OBSOLÈTE » en tête de fichier. À supprimer lors du nettoyage, pa
 
 ## Liste de non-régression (simulation)
 
-Les tests automatiques couvrent déjà chaque ligne côté logique. À refaire en
-simulation, parce qu'eux seuls montrent le vrai Nav2 et le vrai SLAM :
+Les tests automatiques couvrent la logique. La simulation, elle seule, montre le
+vrai Nav2 et le vrai SLAM. Scénario automatique, sur simulation lancée avec la carte
+`entrepot` et le robot non placé :
+```
+python3 essais/architecture/non_regression.py      # toute la liste ci-dessous
+python3 essais/architecture/carto_repetee.py 5     # 5 cartographies de suite
+```
+Il sauvegarde les points de la carte avant et les remet après.
 
-- [ ] Appel vers un point, arrivée, retour en veille
-- [ ] Retour à la base
-- [ ] Patrouille : boucle, point inaccessible sauté, tous inaccessibles = échec
-- [ ] Supprimer un point de la patrouille en cours
-- [ ] Destination refusée (robot non placé) : échec + message dans le journal
-- [ ] Changer de carte
-- [ ] Cartographie : enregistrer, puis abandonner
-- [ ] Redémarrer la navigation
-- [ ] Ctrl+C pendant un trajet : trajet annulé
+Validé le 2026-11-13 (simulation neuve, entrepôt) :
+- [x] Appel vers un point, arrivée, retour en veille
+- [x] Retour à la base
+- [x] Patrouille : boucle, point inaccessible sauté, tous inaccessibles = échec
+- [x] Supprimer un point de la patrouille en cours
+- [x] Destination refusée (robot non placé) : échec + message dans le journal
+- [x] Changer de carte
+- [x] Cartographie : enregistrer, puis abandonner (6 fois de suite)
+- [x] Redémarrer la navigation (seulement le cas « tout est déjà actif »)
+- [ ] Ctrl+C pendant un trajet : trajet annulé (non couvert par le scénario)
 
 En cas de problème : `git checkout main` revient au répartiteur d'avant.
+
+## Problèmes rencontrés pendant la validation
+
+Tous deux existaient déjà dans l'ancien répartiteur : la validation automatique,
+répétée, les a fait sortir.
+
+1. **Le robot restait sans carte après une cartographie.**
+   - Symptôme : après « enregistrer », plus aucune réponse du répartiteur ; le
+     journal répétait « change map service not available ».
+   - Diagnostic : SLAM bien arrêté, mais aucune trace du redémarrage de la
+     localisation. Appelé à la main, ce redémarrage marchait aussitôt.
+   - Cause probable : la demande s'est perdue. `cycle_de_vie.py` créait un client
+     de service neuf à chaque appel, et ROS 2 peut perdre la première demande d'un
+     client tout juste créé. Panne intermittente (1 fois sur 3 passages).
+   - Solution : clients créés au démarrage et gardés ; map_server vérifié avant de
+     charger une carte, avec un message d'erreur au lieu d'une attente sans fin.
+2. **Un appel trop tôt figeait le répartiteur.**
+   - Symptôme : « 'NavigateToPose' action server not available, waiting... » en
+     boucle, plus aucune commande traitée.
+   - Cause : `goToPose` (BasicNavigator) attend le serveur de navigation sans limite.
+   - Solution : le répartiteur vérifie sa présence (5 s au plus) et refuse sinon.
+   - Révélé par un défaut de l'outil de test : la simulation précédente mal arrêtée
+     a privé la nouvelle de Nav2. Leçon : vérifier que tout est arrêté avant de relancer.
+
+Leçon commune : aucune attente sans limite dans le répartiteur. Toute attente d'un
+autre nœud a un délai et un message d'erreur.

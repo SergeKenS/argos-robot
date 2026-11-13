@@ -6,7 +6,7 @@ fonctions nouvelles avant que le robot réel roule. Architecture : `ARCHITECTURE
 | Phase | Contenu | État |
 |---|---|---|
 | 0. Simulation | Étapes 1 à 6 plus bas : clavier, SLAM, Nav2, points, répartiteur, page web | Fait |
-| 1. Base logicielle | Répartiteur en fonctionnalités, tests automatiques | Écrit, à valider en simulation |
+| 1. Base logicielle | Répartiteur en fonctionnalités, tests automatiques | Validé en simulation (2026-11-13) ; reste 2 et 3 |
 | 2. Essais par composant | Tourelle, Pi 5, LiDAR, moteurs, alimentation | En cours (tourelle) |
 | 3. Robot réel | Assemblage, pilotes, refaire les étapes 1 à 6 sur le vrai robot | À venir |
 | 4. Tête | Tourelle sur le robot, nœud « regard », fonctionnalité Suivi | À venir |
@@ -14,16 +14,10 @@ fonctions nouvelles avant que le robot réel roule. Architecture : `ARCHITECTURE
 
 ## Phase 1 : base logicielle
 
-1. **Valider la réorganisation en simulation** (prochaine action). Sur Ubuntu :
-   ```
-   cd ~/Documents/Projet/argos_ws
-   git fetch && git checkout revue-architecture
-   python3 -m pytest src/argos_mission/test/test_fonctionnalites.py src/argos_mission/test/test_repartiteur.py
-   colcon build --symlink-install && source install/setup.bash
-   ros2 launch argos_mission argos.launch.py
-   ```
-   Puis repasser la liste de non-régression de `ARCHITECTURE.md`. Réussi = les 9
-   lignes cochées. Sinon, `git checkout main` revient à l'ancien répartiteur.
+1. **Valider la réorganisation en simulation** ✔ (2026-11-13) : 25 vérifications sur
+   25, scénario automatique `essais/architecture/non_regression.py`. Reste à faire à
+   la main : Ctrl+C pendant un trajet. Branche `revue-architecture`, à fusionner
+   dans `main` quand l'utilisateur l'a vue.
 2. **Lancement sans simulation** : `argos.launch.py` lance toujours Gazebo et
    `use_sim_time`. Ajouter un argument `simulation:=false` (ou un second fichier)
    avant la phase 3. Réussi = Nav2 démarre sans Gazebo, en attente des capteurs.
