@@ -1,6 +1,3 @@
-# OBSOLÈTE (2026-11-13) : carte du petit monde tb3_sandbox. La simulation lance
-# maintenant l'entrepôt : créer une carte depuis la page web. À supprimer au nettoyage
-# (avec arene.yaml et arene.pgm), une fois une carte de l'entrepôt enregistrée.
 # Points nommés de la carte « arene » (arene.yaml).
 # Un fichier de points par carte : les coordonnées n'ont de sens que sur leur carte.
 #   x, y  : position en mètres, dans le repère de la carte (frame « map »)
