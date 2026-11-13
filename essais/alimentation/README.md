@@ -64,4 +64,25 @@ depuis la batterie du robot, avant de tout assembler.
 
 ## Problèmes rencontrés
 
-(symptôme, diagnostic, cause, solution)
+1. **Ports USB du Pi limités à 600 mA sur le convertisseur.**
+   - Symptôme : sur le convertisseur 5 V 5 A, le Pi annonçait une alimentation de
+     3 000 mA seulement (`/proc/device-tree/chosen/power/max_current`) et
+     `usb_max_current_enable=0`. Il limitait donc l'ensemble de ses ports USB à
+     600 mA. Repéré par la mesure, avant toute panne.
+   - Pourquoi c'est bloquant : la tourelle (caméra, ESP32, deux servos) dépasse
+     600 mA dès que les servos bougent (un servo SG90 bloqué tire environ 650 mA),
+     et le LiDAR s'y ajoutera. Au-delà, le Pi coupe ses ports USB : la caméra et la
+     tourelle s'éteindraient en plein suivi.
+   - Cause : le Pi 5 ne sait qu'une alimentation fournit 5 A que si elle le lui
+     annonce par USB Power Delivery. Le convertisseur (F35J5V5A2S-C) ne le fait pas :
+     le Pi le traite comme une alimentation de 3 A, comme un chargeur de téléphone.
+   - Solution : `PSU_MAX_CURRENT=5000` dans la configuration du chargeur de démarrage
+     (`sudo rpi-eeprom-config --apply <fichier>`, puis redémarrage). Le Pi voit alors
+     5 000 mA, active `usb_max_current_enable=1` et accorde 1,6 A à ses ports USB.
+     Justifié parce que le convertisseur est donné pour 5 A et que la tension a tenu
+     à 5,00 V sous effort ; reste à le confirmer en charge réelle (tourelle, LiDAR).
+   - À savoir : ce réglage dit au Pi de faire confiance à l'alimentation. Sur une
+     alimentation qui ne tient pas vraiment 5 A, il ne faut pas l'utiliser. Retour
+     arrière : configuration d'origine gardée dans `~/argos_claude/eeprom_avant_psu.txt`.
+   - Source : livre blanc Raspberry Pi « USB Power delivery on Raspberry Pi 5 »
+     (RP-009856).
