@@ -1,0 +1,17 @@
+# Paramètres du nœud pont_moteurs (robot réel). Mesures : essais/moteurs/README.md
+pont_moteurs:
+  ros__parameters:
+    port: ""                    # vide : carte trouvée par sa puce USB (1a86:7522)
+    entraxe: 0.0                # m, milieu à milieu des roues : À MESURER
+    diametre_roue: 0.067        # m, mesuré à la règle
+    impulsions_par_tour: 1760   # 11 x 4 x 40 (réduction 1:40), vérifié à la main
+    sortie_gauche: 4            # roue gauche sur Motor 4
+    sortie_droite: 3            # roue droite sur Motor 3
+    sens_gauche: -1             # moteur gauche monté en miroir
+    sens_droite: 1
+    vitesse_max: 0.3            # m/s par roue (vitesse mesurée précise à 3 % jusqu'ici)
+    delai_chien_de_garde: 0.5   # s sans cmd_vel avant l'arrêt
+    frequence: 20.0             # Hz : ordres aux moteurs et odométrie
+    publier_tf: true            # odom -> base_link (désactiver si un autre nœud le fait)
+    repere_odom: odom
+    repere_robot: base_link
