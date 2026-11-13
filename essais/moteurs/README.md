@@ -67,7 +67,8 @@ Configuration lue à la livraison : `Motor_type:1` (520), `Dead_Zone:1600`,
 5. ✔ `Pulse_Phase:40` survit à une coupure d'alimentation (batterie débranchée 10 s)
 6. Au sol : 1 m mesuré au mètre contre l'odométrie (5 % attendu), distance d'arrêt
    avec le poids du robot
-7. Nœud ROS 2 « pont » : `cmd_vel` vers `$spd`, `$MAll` vers `/odom`, chien de garde
+7. ✔ Nœud ROS 2 `pont_moteurs` (paquet `src/argos_base`), essayé roues en l'air.
+   Reste : entraxe mesuré (provisoire 0,17 m), puis essai au sol (étape 6).
 4. Mesures : sens de rotation, impulsions par tour de roue, vitesse obtenue contre
    vitesse demandée, temps de réaction, ordres par seconde acceptés sans retard
 5. Odométrie : 1 m au sol mesuré au mètre, contre l'odométrie (5 % attendu)
@@ -112,6 +113,22 @@ par les encodeurs sur les 2 dernières secondes de 4 s) :
   | `$spd:0,0,0,0#` (asservi) | 60 à 80 mm, roues immobiles après 1,8 s | 115 à 127 mm, 2,5 s |
   | `$pwm:0,0,0,0#` (direct) | 14 à 23 mm, 0,2 s | 35 à 59 mm, 0,4 s |
 
+Nœud `pont_moteurs` sur le Pi, roues en l'air, entraxe provisoire 0,17 m :
+
+| Essai | Résultat |
+|---|---|
+| `/odom` et transformation `odom -> base_link` | 20 Hz exactement |
+| `cmd_vel` 0,1 m/s pendant 3 s | vitesse mesurée 0,100 m/s, odométrie +0,318 m (3 s + arrêt) |
+| Un seul `cmd_vel`, puis plus rien (chien de garde) | roues arrêtées 0,8 s après l'ordre |
+| Rotation 0,5 rad/s pendant 3 s | +82° (86° attendus ; dépend de l'entraxe, provisoire) |
+| Nœud coupé en plein mouvement | roues immobiles |
+
+Lancer le nœud sur le Pi :
+```
+source ~/Documents/Projet/argos_ws/install/setup.bash
+ros2 run argos_base pont_moteurs --ros-args --params-file ~/Documents/Projet/argos_ws/install/argos_base/share/argos_base/config/base.yaml
+```
+
 ## Problèmes rencontrés
 
 1. **L'article trouvé en ligne ne correspond pas à ce programme.**
@@ -135,3 +152,14 @@ par les encodeurs sur les 2 dernières secondes de 4 s) :
      3 fois plus court) ; chien de garde dans le nœud (arrêt si aucun `cmd_vel`
      depuis 0,5 s) ; et un arrêt d'urgence matériel qui coupe l'alimentation des
      moteurs, indépendant du logiciel.
+   - Fait dans `pont_moteurs` : arrêt par `$pwm:0`, chien de garde 0,5 s (mesuré :
+     roues arrêtées 0,8 s après le dernier ordre), arrêt à la fermeture du nœud.
+4. **Le nœud ne publiait aucune odométrie** (premier essai sur le Pi).
+   - Symptôme : nœud démarré, mais rien sur `/odom`.
+   - Diagnostic : la classe `CarteYahboom` seule, sur le Pi, ne recevait aucun
+     compteur ; une seconde demande `$upload:1,0,0#` les faisait arriver.
+   - Cause : la première commande, écrite juste après l'ouverture du port, se perd.
+     Les scripts d'essai attendaient 0,5 s avant d'écrire, pas le nœud.
+   - Solution : pause de 0,5 s après l'ouverture, et nouvelle demande si aucun
+     compteur n'arrive pendant 1 s (couvre aussi un redémarrage de la carte).
+     Test automatique ajouté.

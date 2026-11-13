@@ -31,7 +31,7 @@ fonctions nouvelles avant que le robot réel roule. Architecture : `ARCHITECTURE
 | Tourelle (`essais/tourelle/`) | Tester la prédiction, balle tenue à la main, recherche en 8 | Suivi validé à la main, mesures dans le README |
 | Pi 5 (`essais/raspberry/`) | Bloqué : lecteur microSD à acheter. Puis Ubuntu, SSH, ROS 2 Jazzy | `ros2 topic list` du Pi vu depuis le PC |
 | LiDAR C1 | Sur le Pi, avec `rplidar_ros` | `/scan` affiché dans RViz sur le PC |
-| Moteurs et encodeurs (`essais/moteurs/`) | Carte YB-ESF01 retenue (voir plus bas) : protocole, sens des roues, encodeurs | Robot sur cales : `cmd_vel` obéi, `/odom` juste à 5 % sur 1 m |
+| Moteurs et encodeurs (`essais/moteurs/`) | Roues en l'air ✔ (protocole, sens, vitesse à 3 %, nœud `pont_moteurs`) ; reste : entraxe, essai au sol | Robot sur cales : `cmd_vel` obéi, `/odom` juste à 5 % sur 1 m |
 | Alimentation (`essais/alimentation/`) | Pi sur batterie ✔ ; reste : charge réelle (tourelle, puis LiDAR), arrêt d'urgence, autonomie | Pi + LiDAR + moteurs sans redémarrage du Pi ; l'arrêt d'urgence coupe les moteurs |
 
 **Décision moteurs (prise le 2026-11-13).** La carte du châssis Yahboom,
