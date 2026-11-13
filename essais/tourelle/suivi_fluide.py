@@ -24,6 +24,7 @@ Sur le Raspberry Pi (pas d'écran) :
 """
 import argparse
 import math
+import signal
 import threading
 import time
 from collections import deque
@@ -271,6 +272,11 @@ def recherche(t):
             CENTRE_HAUT + AMPLITUDE_RECHERCHE[1] * math.sin(2 * tour))
 
 
+def demande_d_arret(*_):
+    """Appelée à la réception de SIGTERM : fait comme si on avait tapé Ctrl+C."""
+    raise KeyboardInterrupt
+
+
 def main():
     arguments = argparse.ArgumentParser(description='Suivi d\'un objet rouge par la tourelle.')
     arguments.add_argument('--camera', type=int, default=CAMERA,
@@ -278,6 +284,12 @@ def main():
     arguments.add_argument('--sans-fenetre', action='store_true',
                            help='pas de fenêtre (Raspberry Pi) : image dans /tmp/tourelle.jpg')
     options = arguments.parse_args()
+
+    # Lancé en arrière-plan (sur le Pi), le programme ne reçoit pas Ctrl+C : le
+    # système l'ignore pour les tâches de fond. On traite donc aussi la demande
+    # d'arrêt standard (SIGTERM, envoyée par « kill » ou « pkill ») comme un Ctrl+C,
+    # pour remettre la tourelle au centre avant de quitter.
+    signal.signal(signal.SIGTERM, demande_d_arret)
 
     tourelle = Tourelle()
     camera = Camera(options.camera)

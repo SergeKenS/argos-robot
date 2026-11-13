@@ -143,6 +143,17 @@ Les deux qui bloquaient tout (la tourelle tournait « au hasard ») :
      changement de sens. Écart entre les deux sens : de 1,35° à 0,1° environ.
      Il reste des pas d'environ 0,4° : d'où la zone morte de 3 px côté PC.
 
+3. **Sur le Pi, le suivi lancé en arrière-plan ne s'arrêtait pas** (2026-11-13).
+   - Symptôme : `kill -INT` (l'équivalent de Ctrl+C) sans effet, la tourelle
+     continuait de suivre.
+   - Cause : un programme lancé en tâche de fond (`&`) dans un script ignore Ctrl+C,
+     et il hérite de ce réglage. Le `except KeyboardInterrupt` n'était jamais atteint.
+   - Solution : `suivi_fluide.py` traite aussi SIGTERM (envoyé par `kill` ou `pkill`)
+     comme un Ctrl+C : la tourelle revient au centre et le port série se ferme.
+     Vérifié : lancement en arrière-plan, `pkill -TERM`, arrêt propre en moins de 3 s.
+   - Pour le robot : tout nœud lancé sans terminal doit savoir s'arrêter sur SIGTERM
+     (c'est ce qu'envoie `ros2 launch` à l'arrêt).
+
 Autres pièges, plus simples :
 
 - Numéro de caméra : OpenCV regardait la webcam du portable (la tourelle
