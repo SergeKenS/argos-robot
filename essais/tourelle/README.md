@@ -38,6 +38,9 @@ Dans l'IDE : carte « ESP32 Dev Module », port COM3, série à 115200 bauds.
 
 ## Fichiers
 
+Les essais 1 à 3 (`balayage/`, `suivi_simule/`, `suivi_camera/`, `suivi_rouge.py`)
+sont marqués OBSOLÈTE : à supprimer au nettoyage, une fois l'essai 4 validé à la main.
+
 - `balayage/` : essai 1, balayage lent de chaque servo (branchement, centres)
 - `suivi_simule/` : essai 2, suivi d'un objet virtuel, réactivité réglée par `GAIN`
 - `suivi_camera/` : essai 3, côté ESP32 : reçoit "bas,haut" par l'USB (115200

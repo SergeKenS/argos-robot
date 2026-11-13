@@ -1,3 +1,6 @@
+// OBSOLÈTE (2026-11-13) : essai 3, remplacé par suivi_fluide/suivi_fluide.ino.
+// Sert encore de référence au banc de mesure (banc_mesure/banc.py essai3).
+// À supprimer au nettoyage.
 // suivi_camera.ino
 // Essai 3 de la tourelle, côté ESP32 : reçoit des angles par l'USB et les
 // applique aux servos. C'est le PC (suivi_balle.py) qui voit la balle et

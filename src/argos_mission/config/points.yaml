@@ -1,3 +1,5 @@
+# OBSOLÈTE (2026-11-13) : seul aller_a.py (obsolète) lit ce fichier.
+# Les points sont maintenant dans maps/<carte>_points.yaml. À supprimer au nettoyage.
 # Points nommés : chaque nom correspond à une pose sur la carte « arene ».
 #   x, y  : position en mètres, dans le repère de la carte (frame « map »)
 #   theta : orientation du robot à l'arrivée, en radians (0 = vers +x)

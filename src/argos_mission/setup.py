@@ -31,6 +31,7 @@ setup(
     entry_points={
         'console_scripts': [
             # nom de la commande = module:fonction à appeler
+            # aller_a : OBSOLÈTE, à retirer au nettoyage (voir aller_a.py)
             'aller_a = argos_mission.aller_a:main',
             'repartiteur = argos_mission.repartiteur:main',
         ],

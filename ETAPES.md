@@ -1,3 +1,88 @@
+# Feuille de route
+
+Mise à jour le 2026-11-13. Principe : un composant, un essai, une mesure. Peu de
+fonctions nouvelles avant que le robot réel roule. Architecture : `ARCHITECTURE.md`.
+
+| Phase | Contenu | État |
+|---|---|---|
+| 0. Simulation | Étapes 1 à 6 plus bas : clavier, SLAM, Nav2, points, répartiteur, page web | Fait |
+| 1. Base logicielle | Répartiteur en fonctionnalités, tests automatiques | Écrit, à valider en simulation |
+| 2. Essais par composant | Tourelle, Pi 5, LiDAR, moteurs, alimentation | En cours (tourelle) |
+| 3. Robot réel | Assemblage, pilotes, refaire les étapes 1 à 6 sur le vrai robot | À venir |
+| 4. Tête | Tourelle sur le robot, nœud « regard », fonctionnalité Suivi | À venir |
+| 5. Supervision | Claude comme superviseur, fonctionnalité Observation | À venir |
+
+## Phase 1 : base logicielle
+
+1. **Valider la réorganisation en simulation** (prochaine action). Sur Ubuntu :
+   ```
+   cd ~/Documents/Projet/argos_ws
+   git fetch && git checkout revue-architecture
+   python3 -m pytest src/argos_mission/test/test_fonctionnalites.py src/argos_mission/test/test_repartiteur.py
+   colcon build --symlink-install && source install/setup.bash
+   ros2 launch argos_mission argos.launch.py
+   ```
+   Puis repasser la liste de non-régression de `ARCHITECTURE.md`. Réussi = les 9
+   lignes cochées. Sinon, `git checkout main` revient à l'ancien répartiteur.
+2. **Lancement sans simulation** : `argos.launch.py` lance toujours Gazebo et
+   `use_sim_time`. Ajouter un argument `simulation:=false` (ou un second fichier)
+   avant la phase 3. Réussi = Nav2 démarre sans Gazebo, en attente des capteurs.
+3. **Protéger la page** (mot de passe, rosbridge limité au réseau local) : avant
+   tout usage hors de la maison, et avant d'ouvrir un accès au superviseur.
+
+## Phase 2 : essais par composant (dossier `essais/`)
+
+| Essai | Reste à faire | Réussi quand |
+|---|---|---|
+| Tourelle (`essais/tourelle/`) | Tester la prédiction, balle tenue à la main, recherche en 8 | Suivi validé à la main, mesures dans le README |
+| Pi 5 (`essais/raspberry/`) | Bloqué : lecteur microSD à acheter. Puis Ubuntu, SSH, ROS 2 Jazzy | `ros2 topic list` du Pi vu depuis le PC |
+| LiDAR C1 | Sur le Pi, avec `rplidar_ros` | `/scan` affiché dans RViz sur le PC |
+| Moteurs et encodeurs | **Décision à prendre à la réception du châssis** (voir plus bas) | Robot sur cales : `cmd_vel` obéi, `/odom` juste à 5 % sur 1 m |
+| Alimentation | Convertisseur 12 V vers 5 V, arrêt d'urgence, autonomie | Pi + LiDAR + moteurs sans redémarrage du Pi ; l'arrêt d'urgence coupe les moteurs |
+
+**Décision moteurs.** `MATERIEL.md` prévoyait un ESP32 avec `linorobot2_hardware`.
+Le châssis Yahboom acheté arrive avec une carte MSPM0 et un module pilote 4 moteurs
+à encodeur (`Spec_Materiel/Cout.md`). Deux voies :
+- garder l'idée de départ : un ESP32 pilote les moteurs et publie l'odométrie
+  (micro-ROS), avec un pont en H si le module Yahboom ne se commande pas simplement ;
+- utiliser le module Yahboom tel quel, s'il offre une liaison série documentée.
+
+Critère de choix : la voie qui donne `cmd_vel` et `/odom` en ROS 2 Jazzy avec le
+moins de code à nous. Non vérifié : à trancher module en main. Leçon de l'essai
+tourelle, valable dans les deux cas : aucune fonction bloquante dans la boucle du
+microcontrôleur.
+
+## Phase 3 : robot réel
+
+1. Assemblage, description du robot (URDF : roues, LiDAR, dimensions réelles),
+   rayon du robot dans `nav2_params.yaml` (aujourd'hui celui du TurtleBot3).
+2. Pilotes : base roulante, `rplidar_ros`, IMU.
+3. Refaire les étapes 1 à 6 sur le vrai robot, dans l'ordre : clavier, SLAM, Nav2,
+   répartiteur, page web. Mesures sur le Pi : `ros2 topic hz /cmd_vel_nav`
+   (10 Hz tenus), `htop`, `vcgencmd measure_temp`.
+4. Réussi = les livrables du `README.md`, dans une vraie pièce.
+
+## Phase 4 : tête (tourelle et Suivi)
+
+1. Nœud « regard » sur le Pi : reprend `essais/tourelle/suivi_fluide.py` (vision,
+   direction de la cible). La tourelle garde son croquis `suivi_fluide.ino` et son
+   protocole texte, qui marche : micro-ROS seulement s'il apporte quelque chose.
+2. Fonctionnalité Suivi (`fonctionnalites/suivi.py`) : détails dans « Pistes notées ».
+3. Image à la demande sur la page (une photo, pas forcément un flux).
+
+## Phase 5 : supervision
+
+Le robot reste autonome ; le superviseur est un utilisateur de plus.
+
+1. Accès : SSH vers le Pi, page protégée.
+2. Tâches de Claude, par séances : surveiller une patrouille (journal, une photo de
+   temps en temps), identifier un objet inconnu, régler et mesurer, développer.
+3. Ce qui revient souvent devient une fonctionnalité (ex. Observation) et n'a plus
+   besoin de lui.
+
+Limite connue : il décide en secondes, pas en millisecondes. Jamais de pilotage
+direct des moteurs par le superviseur : il donne des objectifs, Nav2 conduit.
+
 # Étapes réalisées
 
 Chaque terminal commence par :
@@ -54,7 +139,7 @@ Ce qui calcule le trajet :
 Paquet `argos_mission` (dans `src/`) :
 - `config/points.yaml` : nom → x, y, theta (relevés avec RViz → **Publish Point**
   + `ros2 topic echo /clicked_point`)
-- `argos_mission/aller_a.py` : lit le YAML, envoie le goal à Nav2 via
+- `argos_mission/aller_a.py` (OBSOLÈTE depuis le répartiteur) : lit le YAML, envoie le goal à Nav2 via
   `BasicNavigator` (nav2_simple_commander)
 
 Compiler (après chaque `git pull`) :
@@ -72,8 +157,9 @@ ros2 run argos_mission aller_a alpha
 ## Étape 5 : Répartiteur à 3 modes ✔
 
 - `maps/arene_points.yaml` : points + ordre de patrouille (un fichier par carte)
-- `argos_mission/repartiteur.py` : machine à états VEILLE / APPEL / PATROUILLE
-  (+ état ECHEC). Ne recalcule le chemin que s'il devient bloqué.
+- `argos_mission/repartiteur.py` : états VEILLE / APPEL / PATROUILLE (+ ECHEC).
+  Ne recalcule le chemin que s'il devient bloqué. Depuis le 2026-11-13, la logique
+  est rangée par fonctionnalité (`fonctionnalites/service.py`), voir `ARCHITECTURE.md`.
 - `config/nav2_params.yaml` : copie des paramètres Nav2, marge d'obstacle
   `inflation_radius` 0.70 → **0.25** (jamais sous 0.22, le rayon du robot)
 
@@ -144,8 +230,9 @@ Mesurer sur le Pi : `ros2 topic hz /cmd_vel_nav`, `htop`, `vcgencmd measure_temp
   n'est pas celle que voit la caméra). Peu de couleurs bien séparées (ex. rouge, vert,
   bleu, jaune) ; éviter orange, rose, marron, proches de la peau. Déplacement par Nav2 (arbre « follow point » :
   but mis à jour en continu, arrêt à 1 m), jamais de vitesses envoyées directement aux
-  moteurs. Tourelle commandée par un topic ROS (micro-ROS sur l'ESP32) au lieu du
-  protocole texte de l'essai ; garder la limite d'environ 25 ordres/s. Vérifier qu'il
+  moteurs. Tourelle : garder le croquis et le protocole texte de l'essai 4
+  (`suivi_fluide.ino`), qui acceptent 500 ordres/s. L'ancienne limite de 25 ordres/s
+  venait de la bibliothèque ESP32Servo, pas de l'ESP32 (voir `essais/tourelle/README.md`). Vérifier qu'il
   reste 2 broches libres pour les servos sur la carte du robot. Ordre : couleur, puis
   personne (modèle COCO), visage seulement si la décision change.
 
@@ -234,6 +321,7 @@ puis active un par un les serveurs de navigation restés arrêtés.
 
 ## Monde plus grand : entrepôt (à tester)
 
+La carte `arene` (monde `tb3_sandbox`) est donc obsolète.
 `tb3_sandbox` est trop petit pour une grande carte (la carte ne peut pas dépasser le
 monde simulé). Monde retenu : `src/argos_mission/worlds/warehouse.sdf`, entrepôt
 d'environ 27 x 45 m copié de turtlebot4_simulator (jazzy), avec les plugins LiDAR et

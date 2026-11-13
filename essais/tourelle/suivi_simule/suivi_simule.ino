@@ -1,3 +1,5 @@
+// OBSOLÈTE (2026-11-13) : essai 2, sans suite.
+// À supprimer au nettoyage.
 // suivi_simule.ino
 // Essai 2 de la tourelle : un objet virtuel se déplace et la tourelle le suit,
 // comme elle suivra plus tard une vraie balle vue par la caméra.

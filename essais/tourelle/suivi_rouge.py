@@ -1,3 +1,6 @@
+# OBSOLÈTE (2026-11-13) : essai 3, remplacé par suivi_fluide.py.
+# Sert encore de référence au banc de mesure (banc_mesure/banc.py essai3).
+# À supprimer au nettoyage.
 """Garde un objet rouge au centre de l'image de la caméra de la tourelle.
 
 Le PC voit l'objet et envoie les angles à l'ESP32 (suivi_camera.ino) par l'USB.

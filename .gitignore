@@ -1,4 +1,4 @@
-# Dossiers générés par colcon build — jamais versionnés
+# Dossiers générés par colcon build : jamais versionnés
 build/
 install/
 log/

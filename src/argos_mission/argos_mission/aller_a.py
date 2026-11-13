@@ -1,3 +1,6 @@
+# OBSOLÈTE (2026-11-13) : remplacé par le répartiteur (commande « appel <point> »).
+# Gardé comme trace de l'étape 4. À supprimer au nettoyage, avec config/points.yaml
+# et la ligne « aller_a » de setup.py.
 """Envoie le robot vers un point nommé défini dans config/points.yaml.
 
 Usage : ros2 run argos_mission aller_a <nom_du_point>

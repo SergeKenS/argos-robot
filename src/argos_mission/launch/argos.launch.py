@@ -107,7 +107,7 @@ def generate_launch_description():
             'container_name': 'nav2_container',
         }.items())
     # SLAM Toolbox (cartographie) : lancé « à l'arrêt » (autostart false). Le
-    # répartiteur le démarre seulement quand on crée une carte (voir cartographie.py).
+    # répartiteur le démarre seulement quand on crée une carte (voir cycle_de_vie.py).
     slam = IncludeLaunchDescription(
         PythonLaunchDescriptionSource(os.path.join(
             get_package_share_directory('slam_toolbox'), 'launch', 'online_async_launch.py')),

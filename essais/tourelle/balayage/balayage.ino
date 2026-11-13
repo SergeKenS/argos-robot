@@ -1,3 +1,5 @@
+// OBSOLÈTE (2026-11-13) : essai 1, sans suite.
+// À supprimer au nettoyage.
 // balayage.ino
 // Essai 1 de la tourelle : fait tourner les deux servos SG90, l'un après
 // l'autre, de 45° à 135° et retour, lentement.
