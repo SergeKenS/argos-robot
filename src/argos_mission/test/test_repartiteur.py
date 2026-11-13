@@ -66,6 +66,10 @@ class FauxNavigateur:
         self.editeurs = {}
         self.nav2_accepte = True
         self.resultat = Resultat.SUCCEEDED
+        # Serveur d'action navigate_to_pose (utilisé par goToPose)
+        self.navigation_presente = True
+        self.nav_to_pose_client = types.SimpleNamespace(
+            wait_for_server=lambda timeout_sec: self.navigation_presente)
         # Service map_server/load_map (utilisé par changeMap)
         self.map_server_present = True
         self.change_maps_srv = types.SimpleNamespace(
@@ -250,6 +254,15 @@ def test_destination_refusee(robot):
     robot.traiter_commande('appel alpha')
     assert etats(robot)[-1] == 'ECHEC alpha'
     assert journal(robot) == ['erreur']
+    assert not robot.trajet_en_cours
+
+
+def test_nav2_absent_le_robot_ne_reste_pas_bloque(robot):
+    robot.navigation_presente = False
+    robot.traiter_commande('appel alpha')
+    assert etats(robot)[-1] == 'ECHEC alpha'
+    assert journal(robot) == ['erreur']
+    assert not any(appel[0] == 'goToPose' for appel in robot.appels)
     assert not robot.trajet_en_cours
 
 

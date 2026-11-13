@@ -240,6 +240,11 @@ class Repartiteur(BasicNavigator):
 
     def aller_vers(self, nom):
         """Demande à Nav2 de conduire le robot au point nommé. False si Nav2 refuse."""
+        # Sans serveur de navigation (Nav2 pas encore démarré, ou tombé), goToPose
+        # attendrait sans fin et le robot ne répondrait plus à rien : on refuse.
+        if not self.nav_to_pose_client.wait_for_server(timeout_sec=5.0):
+            self.trajet_en_cours = False
+            return False
         pose = self.creer_pose(self.cartes.points[nom])
         self.trajet_en_cours = bool(self.goToPose(pose, behavior_tree=ARBRE_NAVIGATION))
         return self.trajet_en_cours
