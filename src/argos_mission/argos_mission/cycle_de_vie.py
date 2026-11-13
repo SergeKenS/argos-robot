@@ -1,4 +1,9 @@
-"""Bascule entre navigation (carte enregistrée) et cartographie (nouvelle carte).
+"""Cycle de vie des nœuds de Nav2 et de SLAM Toolbox.
+
+Sert à basculer entre navigation (carte enregistrée) et cartographie (nouvelle
+carte), et à redémarrer la navigation. Ce sont des outils : le répartiteur les
+appelle, la fonctionnalité Cartographie (fonctionnalites/cartographie.py) décide
+de l'enchaînement.
 
 Les deux ne peuvent pas tourner en même temps : chacun publierait sa propre idée
 de la position du robot sur la carte (transformation map → odom).
