@@ -57,7 +57,9 @@ class Cartographie(Fonctionnalite):
 
         # Positions à retenir avant d'arrêter SLAM Toolbox.
         position, depart = robot.position_slam(), robot.depart_slam()
-        robot.arreter_slam()
+        if not robot.arreter_slam():
+            robot.signaler('erreur', 'Retour à la navigation incomplet : si le robot '
+                           'refuse les destinations, le relancer.')
         self.en_cours = False
 
         # Nouvelle carte, avec un point « base » là où la cartographie a commencé.
@@ -65,7 +67,9 @@ class Cartographie(Fonctionnalite):
             cartes.creer(nom, depart)
         except OSError as erreur:
             robot.signaler('erreur', f"Impossible d'écrire les points de {nom} : {erreur}")
-        robot.afficher_carte(nom)
+        if not robot.afficher_carte(nom):
+            robot.publier_points()
+            return
         # SLAM connaissait la position exacte du robot sur cette carte : on la
         # donne à la navigation, ainsi pas besoin de « Placer le robot ».
         robot.placer(position)
@@ -73,7 +77,9 @@ class Cartographie(Fonctionnalite):
         robot.signaler('info', f'Carte {nom} enregistrée et chargée.')
 
     def abandonner(self):
-        self.robot.arreter_slam()
+        if not self.robot.arreter_slam():
+            self.robot.signaler('erreur', 'Retour à la navigation incomplet : si le robot '
+                                'refuse les destinations, le relancer.')
         self.en_cours = False
         # Recharger l'ancienne carte la republie (la page et Nav2 l'affichent à nouveau).
         self.robot.afficher_carte(self.robot.cartes.actuelle)

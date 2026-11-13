@@ -36,18 +36,41 @@ SERVEURS_NAVIGATION = ['controller_server', 'smoother_server', 'planner_server',
 DELAI_ACTIVATION = 330.0
 
 
+def client(noeud, type_service, nom):
+    """Client du service « nom », créé une seule fois puis réutilisé.
+
+    Un client tout juste créé peut perdre sa première demande : ROS 2 le dit prêt
+    (wait_for_service) avant que les deux côtés se soient tout à fait trouvés.
+    Observé le 2026-11-13 : la demande STARTUP de la localisation s'est perdue,
+    le robot restait sans carte. Les clients sont donc créés au démarrage du
+    répartiteur (preparer) et gardés.
+    """
+    clients = noeud.__dict__.setdefault('_clients_cycle_de_vie', {})
+    if nom not in clients:
+        clients[nom] = noeud.create_client(type_service, nom)
+    return clients[nom]
+
+
+def preparer(noeud):
+    """Crée d'avance tous les clients utilisés ici (à appeler au démarrage)."""
+    client(noeud, ManageLifecycleNodes, 'lifecycle_manager_localization/manage_nodes')
+    client(noeud, ChangeState, 'slam_toolbox/change_state')
+    for nom in SERVEURS_NAVIGATION:
+        client(noeud, GetState, f'{nom}/get_state')
+        client(noeud, ChangeState, f'{nom}/change_state')
+
+
 def appeler_service(noeud, type_service, nom, requete, delai=10.0):
     """Appelle un service et attend la réponse (None si absent ou trop lent)."""
-    client = noeud.create_client(type_service, nom)
-    try:
-        if not client.wait_for_service(timeout_sec=delai):
-            noeud.get_logger().error(f'Service indisponible : {nom}')
-            return None
-        futur = client.call_async(requete)
-        rclpy.spin_until_future_complete(noeud, futur, timeout_sec=delai)
-        return futur.result()
-    finally:
-        noeud.destroy_client(client)
+    service = client(noeud, type_service, nom)
+    if not service.wait_for_service(timeout_sec=delai):
+        noeud.get_logger().error(f'Service indisponible : {nom}')
+        return None
+    futur = service.call_async(requete)
+    rclpy.spin_until_future_complete(noeud, futur, timeout_sec=delai)
+    if futur.result() is None:
+        noeud.get_logger().error(f'Pas de réponse de {nom} après {delai:.0f} s')
+    return futur.result()
 
 
 def localisation(noeud, commande):

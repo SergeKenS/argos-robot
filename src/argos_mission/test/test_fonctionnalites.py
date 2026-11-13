@@ -34,6 +34,8 @@ class FauxRobot:
         self.messages = []
         self.nav2_accepte = True
         self.slam_demarre = True
+        self.slam_arrete = True
+        self.carte_chargee = True
         self.sauvegarde_reussit = True
 
     def signaler(self, niveau, texte):
@@ -51,6 +53,7 @@ class FauxRobot:
 
     def afficher_carte(self, nom):
         self.appels.append(('afficher_carte', nom))
+        return self.carte_chargee
 
     def placer(self, point):
         self.appels.append(('placer', point))
@@ -61,7 +64,7 @@ class FauxRobot:
 
     def arreter_slam(self):
         self.appels.append(('arreter_slam',))
-        return True
+        return self.slam_arrete
 
     def sauvegarder_carte(self, nom):
         self.appels.append(('sauvegarder_carte', nom))
@@ -271,6 +274,20 @@ def test_cartographie_abandonner_revient_a_l_ancienne_carte(robot):
     assert robot.appels[-2:] == [('arreter_slam',), ('afficher_carte', 'test')]
     carto.sortir()                       # déjà arrêtée : ne refait rien
     assert robot.appels.count(('arreter_slam',)) == 1
+
+
+def test_cartographie_localisation_non_redemarree(robot):
+    # Panne vue en simulation le 2026-11-13 : la localisation ne redémarre pas.
+    # Le robot doit le dire et ne jamais rester bloqué.
+    robot.slam_arrete = False
+    robot.carte_chargee = False
+    carto = Cartographie(robot)
+    carto.entrer()
+    carto.commande(['enregistrer', 'etage_2'])
+    assert carto.etat() is None
+    assert robot.niveaux() == ['erreur']
+    assert ('placer', {'x': 5.0, 'y': 6.0, 'theta': 1.0}) not in robot.appels
+    assert robot.appels[-1] == ('publier_points',)
 
 
 def test_cartographie_demarrage_impossible(robot):

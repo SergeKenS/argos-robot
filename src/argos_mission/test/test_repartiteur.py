@@ -66,6 +66,10 @@ class FauxNavigateur:
         self.editeurs = {}
         self.nav2_accepte = True
         self.resultat = Resultat.SUCCEEDED
+        # Service map_server/load_map (utilisé par changeMap)
+        self.map_server_present = True
+        self.change_maps_srv = types.SimpleNamespace(
+            wait_for_service=lambda timeout_sec: self.map_server_present)
 
     def create_publisher(self, _type, nom, _qos):
         self.editeurs[nom] = Editeur()
@@ -122,6 +126,7 @@ def robot(tmp_path, monkeypatch):
     cycle = faux_module('argos_mission.cycle_de_vie')
     cycle.appels = []
     cycle.reussite = True
+    cycle.preparer = lambda noeud: None
     for nom in ('demarrer', 'arreter', 'sauvegarder', 'redemarrer_navigation'):
         def fonction(*_, nom=nom):
             cycle.appels.append(nom)
@@ -285,6 +290,18 @@ def test_cartographie_enregistrer(robot):
                                  ('setInitialPose', 0.0, 0.0)]
     assert points_publies(robot)['carte'] == 'etage_2'
     assert list(points_publies(robot)['points']) == ['base']
+
+
+def test_map_server_absent_le_robot_ne_reste_pas_bloque(robot):
+    robot.map_server_present = False
+    robot.traiter_commande('carte autre')
+    assert journal(robot) == ['erreur']
+    assert robot.cartes.actuelle == 'test'          # rien n'a changé
+    assert not any(appel[0] == 'changeMap' for appel in robot.appels)
+    robot.traiter_commande('cartographier')
+    robot.traiter_commande('enregistrer etage_2')
+    assert etats(robot)[-1] == 'VEILLE'
+    assert journal(robot)[-1] == 'erreur'
 
 
 def test_cartographie_abandonner(robot):

@@ -113,6 +113,8 @@ class Repartiteur(BasicNavigator):
                                  self.recevoir_pose, qos_dernier)
         # Pendant la cartographie, SLAM Toolbox publie la position du robot sur « pose ».
         self.create_subscription(PoseWithCovarianceStamped, 'pose', self.recevoir_pose_slam, 10)
+        # Clients des services de cycle de vie créés tout de suite (voir cycle_de_vie.client).
+        cycle_de_vie.preparer(self)
 
         self.publier_etat()
         self.publier_points()
@@ -252,11 +254,20 @@ class Repartiteur(BasicNavigator):
         self.pub_points.publish(String(data=json.dumps(self.cartes.donnees())))
 
     def afficher_carte(self, nom):
-        """Donne la carte « nom » à Nav2 (service map_server/load_map, via BasicNavigator)."""
+        """Donne la carte « nom » à Nav2 (service map_server/load_map, via BasicNavigator).
+
+        Renvoie False si map_server ne répond pas. Sans cette vérification,
+        changeMap attendrait sans fin et le robot ne répondrait plus à rien.
+        """
+        if not self.change_maps_srv.wait_for_service(timeout_sec=10.0):
+            self.signaler('erreur', f'Carte {nom} non chargée : map_server ne répond pas. '
+                          'Relancer le robot.')
+            return False
         # Bloque jusqu'à la réponse (quelques dixièmes de seconde).
         self.changeMap(self.cartes.chemin_carte(nom))
         # Les obstacles vus sur l'ancienne carte n'ont plus de sens sur la nouvelle.
         self.clearAllCostmaps()
+        return True
 
     def placer(self, point):
         """Indique à la navigation où se trouve le robot sur la carte."""
@@ -345,7 +356,8 @@ class Repartiteur(BasicNavigator):
             self.signaler('avertissement', f'Carte introuvable : {nom}')
             return
         self.basculer(None)
-        self.afficher_carte(nom)
+        if not self.afficher_carte(nom):
+            return
         if self.cartes.charger(nom):
             self.signaler('avertissement', 'Points de patrouille inconnus ignorés.')
         self.publier_points()
