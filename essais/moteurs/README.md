@@ -68,7 +68,7 @@ Configuration lue à la livraison : `Motor_type:1` (520), `Dead_Zone:1600`,
 6. Au sol : 1 m mesuré au mètre contre l'odométrie (5 % attendu), distance d'arrêt
    avec le poids du robot
 7. ✔ Nœud ROS 2 `pont_moteurs` (paquet `src/argos_base`), essayé roues en l'air.
-   Reste : entraxe mesuré (provisoire 0,17 m), puis essai au sol (étape 6).
+   Entraxe mesuré : 0,119 m. Reste : essai au sol (étape 6).
 4. Mesures : sens de rotation, impulsions par tour de roue, vitesse obtenue contre
    vitesse demandée, temps de réaction, ordres par seconde acceptés sans retard
 5. Odométrie : 1 m au sol mesuré au mètre, contre l'odométrie (5 % attendu)
@@ -90,6 +90,10 @@ Roues tournées à la main, compteurs `$MAll` enregistrés (aucun moteur aliment
   miroir) : à compenser dans le nœud ROS 2.
 - Roue mesurée à la règle : **67 mm** (la facture annonçait 65 mm ; la carte
   était déjà réglée sur 67).
+- Entraxe (milieu à milieu des roues) : écartement intérieur 92 mm, extérieur
+  146 mm, donc **(92 + 146) / 2 = 119 mm** (largeur d'un pneu : 27 mm). Mis dans
+  `config/base.yaml`. La valeur provisoire de 170 mm aurait fait sous-estimer les
+  rotations de 30 % (82° annoncés pour environ 117° réels).
 
 Roues en l'air, les deux roues ensemble en marche avant (vitesse réelle calculée
 par les encodeurs sur les 2 dernières secondes de 4 s) :

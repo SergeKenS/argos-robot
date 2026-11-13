@@ -2,7 +2,7 @@
 pont_moteurs:
   ros__parameters:
     port: ""                    # vide : carte trouvée par sa puce USB (1a86:7522)
-    entraxe: 0.0                # m, milieu à milieu des roues : À MESURER
+    entraxe: 0.119              # m, milieu à milieu des roues : (92 + 146) / 2 mm, mesuré
     diametre_roue: 0.067        # m, mesuré à la règle
     impulsions_par_tour: 1760   # 11 x 4 x 40 (réduction 1:40), vérifié à la main
     sortie_gauche: 4            # roue gauche sur Motor 4
