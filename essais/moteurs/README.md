@@ -167,65 +167,55 @@ ros2 run argos_base pont_moteurs --ros-args --params-file ~/Documents/Projet/arg
    - Solution : pause de 0,5 s après l'ouverture, et nouvelle demande si aucun
      compteur n'arrive pendant 1 s (couvre aussi un redémarrage de la carte).
      Test automatique ajouté.
-5. **Point dur une fois par tour de roue : moteurs neufs raides (réglé par un rodage).**
-   - Symptôme : vu par l'utilisateur pendant l'essai de 5 m (roues en l'air) : la
-     roue gauche ralentit toujours au même endroit du tour. Ressenti aussi en la
-     tournant à la main, moteurs coupés.
-   - Mesures : vitesse de chaque roue selon sa position dans le tour (encodeurs,
-     environ 250 relevés/s, consigne 150 mm/s, 15 s) : roue gauche environ -40 % dans
-     un secteur précis, roue droite environ -25 % dans un autre. Le cap du robot
-     oscillait de -12° à +10° pendant les 5 m.
-   - Leçon : la moyenne sur 4 s (environ 3 tours) cachait le défaut. L'observation
-     à l'œil l'a trouvé ; la mesure par position dans le tour l'a confirmé.
-   - Cause : mécanique (présent moteur coupé, une fois par tour de roue et non 40
-     fois, donc côté roue ou sortie du réducteur). À localiser : trace de
-     frottement, support du moteur trop serré, puis roue retirée.
-   - Contrôlé : la roue ne frotte sur rien. Piste : réducteur ou axe de sortie.
-   - Pleine vitesse (roues en l'air, paliers de 3 s) : les deux roues tiennent la
-     consigne à 2 % jusqu'à 700 mm/s ; au-delà, la gauche plafonne plus bas
-     (900 → 779 mm/s ; maximum gauche 842, droite 910 mm/s). Le Pi est resté à
-     5,057 V au moins, sans manque de courant (`get_throttled` 0x0).
-   - Limite de la mesure : au-delà d'environ 500 mm/s, la vitesse par position dans
-     le tour n'est plus fiable (fenêtres trop grossières à 5 tours/s).
-   - Test décisif (2026-11-14) : moteurs inversés sur la carte (gauche sur Motor 3,
-     droit sur Motor 4). Le défaut suit le moteur gauche : ralentissement de 38 %
-     dans le tour (droit : 17 %), vitesse maximale 791 mm/s (droit : 874 mm/s).
-   - Cause : **moteur gauche** (réducteur ou axe de sortie), pas la carte.
-   - Solution : demander l'échange du moteur au vendeur, mesures à l'appui. En
-     attendant, moteurs remis sur le câblage validé (gauche Motor 4, droit Motor 3).
-     Câblage remis vérifié le 2026-11-14 : marche avant, les deux roues avancent.
-   - Rodage essayé (2026-11-14) : 3 min en avant puis 3 min en arrière à vitesse
-     maximale. Ralentissement dans le tour : gauche 39 % avant, 49 % après ; droite
-     25 % puis 17 %. Les mesures répétées varient déjà de 38 à 49 % (gauche) et de 17
-     à 29 % (droite) : pas d'amélioration du moteur gauche. Ce n'est pas une bavure
-     qui s'use : échange du moteur demandé au vendeur.
-   - Rodage long, idée de l'utilisateur (« les moteurs sont neufs, encore crispés ») :
-     après deux essais de 30 s par roue, 20 min à vitesse maximale, sens alterné
-     toutes les 2 min (pause de 3 s entre deux sens). Ralentissement dans le tour :
-     gauche 22 % avant puis **5 %** après, droite 3 % puis **5 %**. Vitesse max de la
-     roue gauche : 846 mm/s au 1er cycle, 920 à 927 ensuite (droite : 952 à 986).
-     Le Pi est resté entre 5,016 et 5,079 V pendant les 20 min, sans manque de courant.
-   - Cause révisée : moteurs neufs raides (le gauche plus que le droit), pas un défaut.
-     Le test d'inversion montrait bien que le défaut était dans le moteur ; le rodage
-     l'a fait disparaître. À confirmer par une mesure à froid (moteurs chauds après le
-     rodage : la graisse plus fluide peut masquer un point dur). Si elle reste vers
-     5 à 10 %, l'échange n'est plus nécessaire.
-   - Contrôle juste après (30 s par sens, les deux roues ensemble) :
+5. **Point dur une fois par tour de roue : moteurs neufs raides, réglé par un rodage.**
+   - **Symptôme** (2026-11-13, essai de 5 m roues en l'air) : l'utilisateur voit la
+     roue gauche ralentir toujours au même endroit du tour, et le sent aussi en la
+     tournant à la main, moteurs coupés. Le cap du robot oscillait de -12° à +10°.
+   - **Diagnostic** :
+     - Mesure de la vitesse de chaque roue selon sa position dans le tour
+       (encodeurs, environ 250 relevés/s, 150 mm/s, 15 s) : roue gauche environ
+       -40 % dans un secteur précis, roue droite environ -25 %. La moyenne sur 4 s
+       (environ 3 tours) cachait le défaut : c'est l'œil qui l'a trouvé.
+     - Une fois par tour de roue (et non 40 fois, la réduction) et présent moteur
+       coupé : mécanique, côté roue ou sortie du réducteur. La roue ne frotte sur rien.
+     - Pleine vitesse : jusqu'à 700 mm/s, les deux roues tiennent la consigne à 2 % ;
+       à fond, la gauche plafonne plus bas (842 contre 910 mm/s).
+     - Moteurs inversés sur la carte : le défaut suit le moteur gauche (38 % ; droit
+       17 %). Ce n'est pas la carte.
+   - **Fausse piste** : conclusion « moteur gauche défectueux », message d'échange
+     rédigé pour le vendeur. Un rodage court (3 min dans chaque sens à fond) ne
+     changeait rien de mesurable (39 % avant, 49 % après, dans la dispersion des
+     mesures : 38 à 49 %).
+   - **Cause réelle** : moteurs neufs et raides, le gauche plus que le droit. Idée
+     de l'utilisateur : « les moteurs sont neufs, encore crispés ».
+   - **Solution** : rodage long. Deux essais de 30 s par roue, puis 20 min à vitesse
+     maximale, sens alterné toutes les 2 min, pause de 3 s à chaque changement de
+     sens (éviter le pic de courant d'une inversion brutale). Arrêts automatiques
+     prévus (tension du Pi sous 4,8 V, carte muette).
+   - **Résultat** :
 
-     | | Gauche | Droite |
+     | Point dur dans le tour, 150 mm/s | Avant | Après le rodage de 20 min |
      |---|---|---|
-     | 150 mm/s en avant | 150 mm/s, point dur 3 % | 150 mm/s, point dur 8 % |
-     | 150 mm/s en arrière | 150 mm/s, point dur 0 % | 150 mm/s, point dur 5 % |
-     | Vitesse max en avant | 793 mm/s | 903 mm/s |
-     | Vitesse max en arrière | 892 mm/s | 904 mm/s |
+     | Roue gauche | 38 à 49 % | 0 à 5 % |
+     | Roue droite | 17 à 29 % | 3 à 8 % |
 
-     À vitesse d'usage, le point dur a disparu. À fond, la roue gauche reste 12 %
-     plus lente en marche avant (réducteur encore raide dans ce sens, ou asymétrie
-     normale d'un moteur à balais) : sans effet à 0,3 à 0,5 m/s.
-   - Leçon : sur des moteurs à réducteur neufs, un rodage de 20 min environ avant
-     de conclure à un défaut. Un rodage court (6 min) ne suffisait pas ici.
-     Alimentation pendant les 6 min à pleine vitesse : Pi entre 5,056 et 5,072 V,
-     aucun manque de courant.
+     Contrôle juste après, 30 s par sens : les deux roues tiennent 150 mm/s
+     exactement, avec 0 à 8 % de variation. Les quelques pourcents restants sont à
+     la limite de la mesure (dispersion de quelques pourcents d'une mesure à l'autre).
+     Estimation de l'utilisateur : problème réglé à 95 %, le reste se fera à l'usage.
+   - **Reste** : à fond, la roue gauche est 12 % plus lente en marche avant qu'en
+     arrière (793 contre 892 mm/s ; droite symétrique, 903 et 904). Sans effet aux
+     vitesses d'usage (0,3 à 0,5 m/s). À suivre : cette mesure montre l'avancée du
+     rodage. Échange du moteur : plus nécessaire si la mesure à froid confirme.
+   - **Alimentation pendant les rodages** : Pi entre 5,016 et 5,079 V (6 min puis
+     20 min à pleine vitesse), aucun manque de courant.
+   - **Leçons** :
+     - Sur des moteurs à réducteur neufs, roder environ 20 min avant de conclure à
+       un défaut. 6 min ne suffisaient pas.
+     - Une moyenne sur plusieurs tours cache un défaut qui revient à chaque tour :
+       mesurer selon la position dans le tour.
+     - L'observation humaine (voir, toucher) a trouvé ce que les chiffres moyens
+       cachaient, et l'intuition « moteurs neufs » a corrigé une conclusion fausse.
 6. **Deux nœuds `pont_moteurs` restés en marche, en cachette.**
    - Symptôme : le script de rodage s'arrête dès le départ sur « device reports
      readiness to read but returned no data (device disconnected or multiple
