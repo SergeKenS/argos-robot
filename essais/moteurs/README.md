@@ -167,7 +167,7 @@ ros2 run argos_base pont_moteurs --ros-args --params-file ~/Documents/Projet/arg
    - Solution : pause de 0,5 s après l'ouverture, et nouvelle demande si aucun
      compteur n'arrive pendant 1 s (couvre aussi un redémarrage de la carte).
      Test automatique ajouté.
-5. **Point dur une fois par tour de roue : moteur gauche défectueux.**
+5. **Point dur une fois par tour de roue : moteurs neufs raides (réglé par un rodage).**
    - Symptôme : vu par l'utilisateur pendant l'essai de 5 m (roues en l'air) : la
      roue gauche ralentit toujours au même endroit du tour. Ressenti aussi en la
      tournant à la main, moteurs coupés.
@@ -199,6 +199,19 @@ ros2 run argos_base pont_moteurs --ros-args --params-file ~/Documents/Projet/arg
      25 % puis 17 %. Les mesures répétées varient déjà de 38 à 49 % (gauche) et de 17
      à 29 % (droite) : pas d'amélioration du moteur gauche. Ce n'est pas une bavure
      qui s'use : échange du moteur demandé au vendeur.
+   - Rodage long, idée de l'utilisateur (« les moteurs sont neufs, encore crispés ») :
+     après deux essais de 30 s par roue, 20 min à vitesse maximale, sens alterné
+     toutes les 2 min (pause de 3 s entre deux sens). Ralentissement dans le tour :
+     gauche 22 % avant puis **5 %** après, droite 3 % puis **5 %**. Vitesse max de la
+     roue gauche : 846 mm/s au 1er cycle, 920 à 927 ensuite (droite : 952 à 986).
+     Le Pi est resté entre 5,016 et 5,079 V pendant les 20 min, sans manque de courant.
+   - Cause révisée : moteurs neufs raides (le gauche plus que le droit), pas un défaut.
+     Le test d'inversion montrait bien que le défaut était dans le moteur ; le rodage
+     l'a fait disparaître. À confirmer par une mesure à froid (moteurs chauds après le
+     rodage : la graisse plus fluide peut masquer un point dur). Si elle reste vers
+     5 à 10 %, l'échange n'est plus nécessaire.
+   - Leçon : sur des moteurs à réducteur neufs, un rodage de 20 min environ avant
+     de conclure à un défaut. Un rodage court (6 min) ne suffisait pas ici.
      Alimentation pendant les 6 min à pleine vitesse : Pi entre 5,056 et 5,072 V,
      aucun manque de courant.
 6. **Deux nœuds `pont_moteurs` restés en marche, en cachette.**
