@@ -210,6 +210,18 @@ ros2 run argos_base pont_moteurs --ros-args --params-file ~/Documents/Projet/arg
      l'a fait disparaître. À confirmer par une mesure à froid (moteurs chauds après le
      rodage : la graisse plus fluide peut masquer un point dur). Si elle reste vers
      5 à 10 %, l'échange n'est plus nécessaire.
+   - Contrôle juste après (30 s par sens, les deux roues ensemble) :
+
+     | | Gauche | Droite |
+     |---|---|---|
+     | 150 mm/s en avant | 150 mm/s, point dur 3 % | 150 mm/s, point dur 8 % |
+     | 150 mm/s en arrière | 150 mm/s, point dur 0 % | 150 mm/s, point dur 5 % |
+     | Vitesse max en avant | 793 mm/s | 903 mm/s |
+     | Vitesse max en arrière | 892 mm/s | 904 mm/s |
+
+     À vitesse d'usage, le point dur a disparu. À fond, la roue gauche reste 12 %
+     plus lente en marche avant (réducteur encore raide dans ce sens, ou asymétrie
+     normale d'un moteur à balais) : sans effet à 0,3 à 0,5 m/s.
    - Leçon : sur des moteurs à réducteur neufs, un rodage de 20 min environ avant
      de conclure à un défaut. Un rodage court (6 min) ne suffisait pas ici.
      Alimentation pendant les 6 min à pleine vitesse : Pi entre 5,056 et 5,072 V,
