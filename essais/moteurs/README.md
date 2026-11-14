@@ -194,6 +194,13 @@ ros2 run argos_base pont_moteurs --ros-args --params-file ~/Documents/Projet/arg
    - Solution : demander l'échange du moteur au vendeur, mesures à l'appui. En
      attendant, moteurs remis sur le câblage validé (gauche Motor 4, droit Motor 3).
      Câblage remis vérifié le 2026-11-14 : marche avant, les deux roues avancent.
+   - Rodage essayé (2026-11-14) : 3 min en avant puis 3 min en arrière à vitesse
+     maximale. Ralentissement dans le tour : gauche 39 % avant, 49 % après ; droite
+     25 % puis 17 %. Les mesures répétées varient déjà de 38 à 49 % (gauche) et de 17
+     à 29 % (droite) : pas d'amélioration du moteur gauche. Ce n'est pas une bavure
+     qui s'use : échange du moteur demandé au vendeur.
+     Alimentation pendant les 6 min à pleine vitesse : Pi entre 5,056 et 5,072 V,
+     aucun manque de courant.
 6. **Deux nœuds `pont_moteurs` restés en marche, en cachette.**
    - Symptôme : le script de rodage s'arrête dès le départ sur « device reports
      readiness to read but returned no data (device disconnected or multiple
