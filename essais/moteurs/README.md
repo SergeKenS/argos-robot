@@ -6,7 +6,7 @@ Raspberry Pi, et lire les encodeurs, avant d'écrire le nœud ROS 2.
 ## Matériel
 
 - Châssis Yahboom 2 roues motrices, moteurs 520 à encodeur (12 V, réduction 1:40,
-  300 tr/min), roues de 65 mm, 2 roulettes folles.
+  300 tr/min), roues de 67 mm (mesuré ; la facture dit 65), 2 roulettes folles.
 - Carte moteurs **Yahboom YB-ESF01 V2.0** (retenue le 2026-11-13, voir `ETAPES.md`) :
   - STM32F103 avec le programme de Yahboom
   - 4 pilotes de moteur AT8236 (Motor 1 à 4) ; par moteur : M+, M-, GND, 3V3, HA, HB
@@ -34,8 +34,8 @@ Raspberry Pi, et lire les encodeurs, avant d'écrire le nœud ROS 2.
 - Alimentation : bornier « DC5V-12V », batterie par épissure commune avec le
   convertisseur du Pi (essai sur table seulement, voir `essais/alimentation/`).
 - USB-C de la carte sur le Pi : `/dev/ttyUSB1` (CH340, identifiant `1a86:7522` ;
-  l'ESP32 de la tourelle est `1a86:7523`). Le numéro ttyUSB peut changer : utiliser
-  `/dev/serial/by-path/...` dans le code.
+  l'ESP32 de la tourelle est `1a86:7523`). Le numéro ttyUSB peut changer :
+  `pont_moteurs` trouve la carte par son identifiant USB.
 
 ## Protocole (vérifié sur la carte, programme `Motor_Version:1.7.3`)
 
@@ -62,16 +62,15 @@ Configuration lue à la livraison : `Motor_type:1` (520), `Dead_Zone:1600`,
 
 1. ✔ Câblage vérifié sur photo
 2. ✔ Carte sur USB-C du Pi : elle se présente seule (`Motor_Version:1.7.3`)
-3. ✔ Protocole de lecture et de configuration (tableau ci-dessus).
-4. ✔ Roues en l'air : sens, précision de vitesse, temps de réponse, arrêt (Mesures)
-5. ✔ `Pulse_Phase:40` survit à une coupure d'alimentation (batterie débranchée 10 s)
-6. Au sol : 1 m mesuré au mètre contre l'odométrie (5 % attendu), distance d'arrêt
-   avec le poids du robot
-7. ✔ Nœud ROS 2 `pont_moteurs` (paquet `src/argos_base`), essayé roues en l'air.
-   Entraxe mesuré : 0,119 m. Reste : essai au sol (étape 6).
-4. Mesures : sens de rotation, impulsions par tour de roue, vitesse obtenue contre
-   vitesse demandée, temps de réaction, ordres par seconde acceptés sans retard
-5. Odométrie : 1 m au sol mesuré au mètre, contre l'odométrie (5 % attendu)
+3. ✔ Protocole de lecture et de configuration (tableau ci-dessus)
+4. ✔ Roues en l'air : sens, impulsions par tour, précision de vitesse, temps de
+   réponse, arrêt, réglage gardé après coupure (voir Mesures)
+5. ✔ Nœud ROS 2 `pont_moteurs` (paquet `src/argos_base`), essayé roues en l'air,
+   entraxe mesuré (0,119 m)
+6. ✔ Point dur des moteurs neufs réglé par un rodage (problème 5)
+7. Au sol : 1 m mesuré au mètre contre l'odométrie (5 % attendu), tour complet
+   sur place, distance d'arrêt avec le poids du robot. Demande le Pi, la batterie
+   et le convertisseur fixés sur le châssis.
 
 ## Sources
 
@@ -82,12 +81,13 @@ Configuration lue à la livraison : `Motor_type:1` (520), `Dead_Zone:1600`,
 ## Mesures (2026-11-13)
 
 Roues tournées à la main, compteurs `$MAll` enregistrés (aucun moteur alimenté) :
-- Motor 3 : -1 767 puis -1 852 impulsions pour un tour de roue vers l'avant.
-- Motor 4 : +2 434 (environ 1,4 tour, nombre de tours exact à confirmer).
+- Motor 3 (roue droite) : 1 767 puis 1 852 impulsions pour un tour de roue.
+- Motor 4 (roue gauche) : 2 434 (environ 1,4 tour : tour à la main imprécis).
 - Théorie : 11 impulsions par tour moteur x 4 (deux signaux, chaque front) x 40
   (réduction) = **1 760 par tour de roue**. En 1:30, ce serait 1 320.
 - Les deux moteurs comptent en sens opposés pour un même sens du robot (montés en
-  miroir) : à compenser dans le nœud ROS 2.
+  miroir) : compensé dans le nœud ROS 2. Le sens réel des tours à la main n'était
+  pas sûr : c'est l'observation des moteurs en marche qui a fixé le sens (Câblage).
 - Roue mesurée à la règle : **67 mm** (la facture annonçait 65 mm ; la carte
   était déjà réglée sur 67).
 - Entraxe (milieu à milieu des roues) : écartement intérieur 92 mm, extérieur
@@ -117,7 +117,8 @@ par les encodeurs sur les 2 dernières secondes de 4 s) :
   | `$spd:0,0,0,0#` (asservi) | 60 à 80 mm, roues immobiles après 1,8 s | 115 à 127 mm, 2,5 s |
   | `$pwm:0,0,0,0#` (direct) | 14 à 23 mm, 0,2 s | 35 à 59 mm, 0,4 s |
 
-Nœud `pont_moteurs` sur le Pi, roues en l'air, entraxe provisoire 0,17 m :
+Nœud `pont_moteurs` sur le Pi, roues en l'air (entraxe provisoire 0,17 m pour ces
+essais ; mesuré ensuite : 0,119 m) :
 
 | Essai | Résultat |
 |---|---|
@@ -126,6 +127,7 @@ Nœud `pont_moteurs` sur le Pi, roues en l'air, entraxe provisoire 0,17 m :
 | Un seul `cmd_vel`, puis plus rien (chien de garde) | roues arrêtées 0,8 s après l'ordre |
 | Rotation 0,5 rad/s pendant 3 s | +82° (86° attendus ; dépend de l'entraxe, provisoire) |
 | Nœud coupé en plein mouvement | roues immobiles |
+| 5 m à 0,15 m/s, arrêt par l'odométrie | 36 s, glissade 3,5 cm ; cap oscillant de -12° à +10° (point dur des moteurs neufs, problème 5) |
 
 Lancer le nœud sur le Pi :
 ```

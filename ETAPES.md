@@ -7,7 +7,7 @@ fonctions nouvelles avant que le robot réel roule. Architecture : `ARCHITECTURE
 |---|---|---|
 | 0. Simulation | Étapes 1 à 6 plus bas : clavier, SLAM, Nav2, points, répartiteur, page web | Fait |
 | 1. Base logicielle | Répartiteur en fonctionnalités, tests automatiques | Validé en simulation (2026-11-13) ; reste 2 et 3 |
-| 2. Essais par composant | Tourelle, Pi 5, LiDAR, moteurs, alimentation | En cours (tourelle) |
+| 2. Essais par composant | Tourelle, Pi 5, LiDAR, moteurs, alimentation | Tourelle, Pi, moteurs (roues en l'air) ✔ ; LiDAR attendu |
 | 3. Robot réel | Assemblage, pilotes, refaire les étapes 1 à 6 sur le vrai robot | À venir |
 | 4. Tête | Tourelle sur le robot, nœud « regard », fonctionnalité Suivi | À venir |
 | 5. Supervision | Claude comme superviseur, fonctionnalité Observation | À venir |
@@ -28,11 +28,11 @@ fonctions nouvelles avant que le robot réel roule. Architecture : `ARCHITECTURE
 
 | Essai | Reste à faire | Réussi quand |
 |---|---|---|
-| Tourelle (`essais/tourelle/`) | Tester la prédiction, balle tenue à la main, recherche en 8 | Suivi validé à la main, mesures dans le README |
-| Pi 5 (`essais/raspberry/`) | Bloqué : lecteur microSD à acheter. Puis Ubuntu, SSH, ROS 2 Jazzy | `ros2 topic list` du Pi vu depuis le PC |
-| LiDAR C1 | Sur le Pi, avec `rplidar_ros` | `/scan` affiché dans RViz sur le PC |
-| Moteurs et encodeurs (`essais/moteurs/`) | Roues en l'air ✔ (protocole, sens, vitesse à 3 %, nœud `pont_moteurs`) ; reste : entraxe, essai au sol | Robot sur cales : `cmd_vel` obéi, `/odom` juste à 5 % sur 1 m |
-| Alimentation (`essais/alimentation/`) | Pi sur batterie ✔ ; reste : charge réelle (tourelle, puis LiDAR), arrêt d'urgence, autonomie | Pi + LiDAR + moteurs sans redémarrage du Pi ; l'arrêt d'urgence coupe les moteurs |
+| Tourelle (`essais/tourelle/`) | ✔ Suivi validé sur le Pi et sur batterie (essai 4) | Suivi validé à la main, mesures dans le README ✔ |
+| Pi 5 (`essais/raspberry/`) | ✔ Ubuntu Server 24.04, SSH par clé, ROS 2 Jazzy, échange avec le PC | `ros2 topic list` du Pi vu depuis le PC ✔ |
+| LiDAR C1 | Attendu (pas encore reçu). Sur le Pi, avec `rplidar_ros` | `/scan` affiché dans RViz sur le PC |
+| Moteurs et encodeurs (`essais/moteurs/`) | Roues en l'air ✔ (protocole, vitesse à 3 %, nœud `pont_moteurs`, entraxe, rodage) ; reste : essai au sol | Robot sur cales : `cmd_vel` obéi ✔, `/odom` juste à 5 % sur 1 m (au sol) |
+| Alimentation (`essais/alimentation/`) | Pi sur batterie ✔, tourelle ✔, moteurs 20 min à fond ✔ (Pi jamais sous 5,016 V) ; reste : LiDAR, câblage définitif (fusible, interrupteur, Wago), arrêt d'urgence, autonomie | Pi + LiDAR + moteurs sans redémarrage du Pi ; l'arrêt d'urgence coupe les moteurs |
 
 **Décision moteurs (prise le 2026-11-13).** La carte du châssis Yahboom,
 **YB-ESF01 V2.0**, pilote les moteurs : STM32F103 avec son propre programme, quatre

@@ -12,6 +12,10 @@ Où lire quoi :
 - `INSTALLATION.md` : installer le projet sur un PC neuf
 - `MATERIEL.md` (estimation de départ) et `Spec_Materiel/Cout.md` (achats réels)
 - `essais/` : chaque composant essayé seul, avec ses mesures et ses problèmes résolus
+  (tourelle, Raspberry Pi, alimentation, moteurs)
+
+Paquets ROS 2 (`src/`) : `argos_mission` (missions, lancement), `argos_web` (page
+web), `argos_base` (pilotes du robot réel).
 
 ## Ce que fait le robot
 

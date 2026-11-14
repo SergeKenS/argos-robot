@@ -34,6 +34,20 @@ sa mission et reste en veille.
 - **Outils du robot** : ce que le répartiteur offre aux fonctionnalités (aller à un
   point, annuler, signaler, cartes et points, SLAM). Écrits une fois.
 
+## Paquets
+
+| Paquet | Rôle | Où il tourne |
+|---|---|---|
+| `argos_mission` | Répartiteur et fonctionnalités, lancement (`argos.launch.py`), paramètres Nav2 | PC (simulation), Pi (robot réel) |
+| `argos_web` | Page web (rosbridge + serveur HTTP) | PC, Pi |
+| `argos_base` | Pilotes du robot réel : `pont_moteurs` (carte moteurs Yahboom : `cmd_vel` vers les roues, encodeurs vers `/odom` et `odom -> base_link`, chien de garde) | Pi seulement |
+
+`argos_base` est le niveau 1 vu par ROS : il remplace, sur le robot réel, ce que
+Gazebo fournit en simulation (`cmd_vel` et `/odom`). Même règle que pour le
+répartiteur : la logique sans ROS (`carte_yahboom.py`, `cinematique.py`) est testée
+seule (`python3 -m pytest src/argos_base/test/`). Mesures et réglages :
+`essais/moteurs/README.md`.
+
 ## Fichiers (`src/argos_mission/argos_mission/`)
 
 | Fichier | Rôle | Dépend de ROS |
@@ -113,7 +127,7 @@ Par rapport à la proposition du 2026-11-12 et au code d'avant :
 
 Points faibles connus, non traités ici (voir la feuille de route dans `ETAPES.md`) :
 - `argos.launch.py` lance toujours la simulation : pas encore de lancement pour le
-  robot réel.
+  robot réel (il devra démarrer `pont_moteurs` au lieu de Gazebo).
 - La page et rosbridge n'ont aucune protection. La page parle directement à Nav2
   pour le pilotage manuel, le placement et la marge.
 - La liste des serveurs de navigation existe en double (`argos.launch.py` et

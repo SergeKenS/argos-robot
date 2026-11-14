@@ -39,7 +39,9 @@ Dans l'IDE : carte « ESP32 Dev Module », port COM3, série à 115200 bauds.
 ## Fichiers
 
 Les essais 1 à 3 (`balayage/`, `suivi_simule/`, `suivi_camera/`, `suivi_rouge.py`)
-sont marqués OBSOLÈTE : à supprimer au nettoyage, une fois l'essai 4 validé à la main.
+sont marqués OBSOLÈTE : l'essai 4 les remplace (validé le 2026-11-13), ils peuvent
+être supprimés au nettoyage. `suivi_camera` et `suivi_rouge.py` servent encore de
+point de comparaison à `banc_mesure/banc.py essai3`.
 
 - `balayage/` : essai 1, balayage lent de chaque servo (branchement, centres)
 - `suivi_simule/` : essai 2, suivi d'un objet virtuel, réactivité réglée par `GAIN`
@@ -55,12 +57,21 @@ sont marqués OBSOLÈTE : à supprimer au nettoyage, une fois l'essai 4 validé 
   Ignore les taches rouges fines (fil de servo) : elles remplissent mal leur cercle.
 - `mesure_servo/` : mesure la durée de `servo.write()` (cause de la limite de
   25 ordres par seconde, voir problème 2)
-- `suivi_fluide/` : essai 4 (en cours), côté ESP32 : signal des servos par
-  MCPWM au lieu d'ESP32Servo, lecture série sans attente, boucle à 50 Hz qui
-  amène la tourelle à la cible avec vitesse et accélération limitées. Reçoit
-  "bas,haut" (décimales permises), renvoie sa position "P,temps_ms,bas,haut".
-  Réglages par le port série : "V,300" (°/s), "A,2000" (°/s²), "G,15".
-  Le côté PC reste à écrire.
+- `suivi_fluide/` : essai 4, côté ESP32 : signal des servos par MCPWM au lieu
+  d'ESP32Servo, lecture série sans attente, boucle à 50 Hz qui amène la tourelle
+  à la cible avec vitesse et accélération limitées, rattrapage du jeu des servos.
+  Reçoit "bas,haut" (décimales permises), renvoie sa position "P,temps_ms,bas,haut".
+  Réglages par le port série : "V,300" (°/s), "A,2000" (°/s²), "G,15",
+  "J,2.4,2.1" (jeu des servos, degrés).
+- `suivi_fluide.py` : essai 4, côté PC ou Pi : corrige à chaque image (30 par
+  seconde) au lieu de « regarder puis bouger ». Retrouve où visait la tourelle
+  quand l'image a été prise (retard mesuré 0,08 s, positions annoncées par
+  l'ESP32), estime la vitesse de l'objet pour viser un peu en avant. Recherche
+  en forme de 8 quand l'objet est perdu. Sur le Pi :
+  `python3 suivi_fluide.py --camera 0 --sans-fenetre` (image dans /tmp/tourelle.jpg).
+- `banc_mesure/` : outils de mesure (balle immobile, consigne déplacée dans
+  l'image) : `banc.py fluide` ou `banc.py essai3`, `jeu2.py` (jeu des servos),
+  `retard.py` (retard de l'image), `flasher.ps1` (compiler et téléverser).
 
 ## Mesures (2026-11-12, essai 4)
 
@@ -71,10 +82,13 @@ sont marqués OBSOLÈTE : à supprimer au nettoyage, une fois l'essai 4 validé 
 - `suivi_fluide.ino` : pas de 1 µs (0,1°). 500 ordres par seconde pendant 8 s,
   puis réaction au dernier ordre en 7 ms : plus de file d'attente
 - Saut de 30° avec le profil (300 °/s, 2000 °/s²) : 0,48 s, aucun dépassement
-- À confirmer (pièce sombre, mesure peu fiable) : l'image suit l'ordre avec
-  environ 0,1 s de retard ; les servos plafonnent vers 380 °/s ; 7,4 px par
-  degré (bas) et 7,1 (haut) ; tourelle immobile, la visée dérive d'environ
-  0,8° en 10 s (zone morte des SG90)
+- Avec la balle comme repère (lumière du jour) : l'image montre la position
+  annoncée par l'ESP32 environ 0,08 s plus tôt ; 7,6 px par degré (bas) et 8,8
+  (haut) ; jeu des servos 2,5° (bas) et 2,2° (haut), ramené à environ 0,1° par le
+  rattrapage ; les servos plafonnent vers 380 °/s.
+- Banc d'essai, balle immobile, même détection (essai 3 puis essai 4 sans
+  prédiction) : écart au repos 11,9 px puis 0,9 px ; saut de 10° rattrapé sous
+  5 px en 0,64 s puis 0,34 s ; cible mobile à 31 °/s, écart 41 px puis 24 px.
 
 ## Mesures (2026-11-10)
 
@@ -165,31 +179,24 @@ Autres pièges, plus simples :
 
 ## À améliorer plus tard
 
-- Recherche plus naturelle : trajectoire en courbe (forme de 8) au lieu du
-  rectangle, départ et retour en douceur, petits pas plus nombreux (demande que
-  suivi_camera.ino applique toujours le dernier ordre et jette les anciens).
-- La main est parfois prise pour l'objet (peau sous éclairage chaud). Piste,
-  d'après la couleur mesurée de la balle : saturation min 150, teinte 165 à 180
-  et 0 à 5, luminosité min 40. À vérifier en mesurant la main devant la caméra.
+- La main est parfois prise pour l'objet (peau sous éclairage chaud). Seuils
+  resserrés dans `suivi_fluide.py` (saturation min 140, teinte 168 à 8) ; à
+  revérifier sous l'éclairage du bâtiment. Le mode SUIVI prévoit des couleurs
+  mesurées sur place (`ETAPES.md`).
 
 ## À retenir pour le robot
 
-- La caméra USB ne va pas sur l'ESP32 : la vision tourne sur le PC (plus tard
-  le Pi), l'ESP32 applique les angles.
-- Batterie 2S 7,4 V : trop haute pour les SG90 en direct (6 V max), trop basse
-  pour le convertisseur 5 V (entrée 8 à 32 V).
+- La caméra USB ne va pas sur l'ESP32 : la vision tourne sur le Pi (validé),
+  l'ESP32 n'applique que les angles.
+- Servos SG90 : 6 V au maximum, jamais sur la batterie du robot (12 V). Ils sont
+  alimentés par l'USB du Pi à travers l'ESP32, d'où le réglage
+  `PSU_MAX_CURRENT=5000` du Pi (voir `essais/alimentation/`).
 
 ## État
 
-Essai 4 en cours (pause le 2026-11-12 au soir). Sur l'ESP32 : `suivi_fluide.ino`
-avec rattrapage du jeu (testé). `suivi_fluide.py` : première version testée au
-banc ; la version avec prédiction de vitesse est écrite mais PAS ENCORE TESTÉE.
-Outils de mesure dans `banc_mesure/` (`python banc.py fluide` ou `essai3`).
-Mesuré au banc, balle immobile, même détection (essai 3 puis essai 4 sans
-prédiction) : écart au repos 11,9 px puis 0,9 px ; saut de 10° rattrapé sous
-5 px en 0,64 s puis 0,34 s ; cible mobile à 31 °/s, écart 41 px puis 24 px.
-Reste à faire : tester la prédiction, essai avec la balle tenue à la main,
-recherche en 8, noter le problème du jeu des servos ci-dessus.
+Essai 4 validé le 2026-11-13 sur le Raspberry Pi, sur la batterie du robot :
+balle tenue à la main pendant 5 min, 30 images analysées par seconde, recherche
+en 8 déclenchée 10 fois, balle retrouvée 9 fois (voir « Sur le Raspberry Pi »).
 
 Essai 3 validé le 2026-11-10 : suivi d'un objet rouge tenu à la main.
 Installé : Python 3.14, `python -m pip install opencv-python pyserial`
