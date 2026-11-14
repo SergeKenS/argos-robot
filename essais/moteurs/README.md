@@ -167,7 +167,7 @@ ros2 run argos_base pont_moteurs --ros-args --params-file ~/Documents/Projet/arg
    - Solution : pause de 0,5 s après l'ouverture, et nouvelle demande si aucun
      compteur n'arrive pendant 1 s (couvre aussi un redémarrage de la carte).
      Test automatique ajouté.
-5. **Point dur une fois par tour de roue** (en cours de diagnostic).
+5. **Point dur une fois par tour de roue : moteur gauche défectueux.**
    - Symptôme : vu par l'utilisateur pendant l'essai de 5 m (roues en l'air) : la
      roue gauche ralentit toujours au même endroit du tour. Ressenti aussi en la
      tournant à la main, moteurs coupés.
@@ -187,7 +187,11 @@ ros2 run argos_base pont_moteurs --ros-args --params-file ~/Documents/Projet/arg
      5,057 V au moins, sans manque de courant (`get_throttled` 0x0).
    - Limite de la mesure : au-delà d'environ 500 mm/s, la vitesse par position dans
      le tour n'est plus fiable (fenêtres trop grossières à 5 tours/s).
-   - Prochain test : inverser les moteurs sur la carte (gauche sur Motor 3). Si le
-     défaut suit le moteur : moteur ou réducteur, échange à demander à Yahboom.
+   - Test décisif (2026-11-14) : moteurs inversés sur la carte (gauche sur Motor 3,
+     droit sur Motor 4). Le défaut suit le moteur gauche : ralentissement de 38 %
+     dans le tour (droit : 17 %), vitesse maximale 791 mm/s (droit : 874 mm/s).
+   - Cause : **moteur gauche** (réducteur ou axe de sortie), pas la carte.
+   - Solution : demander l'échange du moteur au vendeur, mesures à l'appui. En
+     attendant, moteurs remis sur le câblage validé (gauche Motor 4, droit Motor 3).
    - Impact : faible à 0,3 à 0,5 m/s (vitesse prévue en intérieur), compensé par
      l'asservissement ; léger zigzag, corrigé par Nav2 avec le LiDAR.
