@@ -193,5 +193,23 @@ ros2 run argos_base pont_moteurs --ros-args --params-file ~/Documents/Projet/arg
    - Cause : **moteur gauche** (réducteur ou axe de sortie), pas la carte.
    - Solution : demander l'échange du moteur au vendeur, mesures à l'appui. En
      attendant, moteurs remis sur le câblage validé (gauche Motor 4, droit Motor 3).
+     Câblage remis vérifié le 2026-11-14 : marche avant, les deux roues avancent.
+6. **Deux nœuds `pont_moteurs` restés en marche, en cachette.**
+   - Symptôme : le script de rodage s'arrête dès le départ sur « device reports
+     readiness to read but returned no data (device disconnected or multiple
+     access on port?) ».
+   - Diagnostic : alimentation stable, aucune déconnexion USB dans le journal du
+     noyau ; `sudo fuser -v /dev/ttyUSB1` montre deux `pont_moteurs` qui occupent
+     le port.
+   - Cause : pour arrêter le nœud, le signal était envoyé à `ros2 run`, qui l'avait
+     lancé. `ros2 run` s'arrêtait, mais pas le nœud (un processus enfant). La
+     vérification regardait aussi `ros2 run` : elle annonçait « nœud arrêté » à tort.
+   - Solution : viser le processus du nœud lui-même
+     (`pkill -TERM -f "[l]ib/argos_base/pont_moteurs"` ; les crochets empêchent la
+     commande de se viser elle-même), puis vérifier que le port est libre
+     (`sudo fuser /dev/ttyUSB1`).
+   - Pour le robot : ces nœuds sans surveillance gardaient les moteurs arrêtés
+     (chien de garde), mais un nœud oublié peut bloquer le suivant. `ros2 launch`
+     arrête bien ses propres nœuds ; le piège est surtout dans les essais à la main.
    - Impact : faible à 0,3 à 0,5 m/s (vitesse prévue en intérieur), compensé par
      l'asservissement ; léger zigzag, corrigé par Nav2 avec le LiDAR.
