@@ -51,6 +51,7 @@ est donc sans risque, tant qu'on n'envoie pas de vitesse non nulle.
 | `$upload:0,0,1#` | `$MSPD:a,b,c,d#` : vitesse de chaque roue (unité à confirmer) | oui |
 | `$upload:0,0,0#` | arrête les envois | oui |
 | `$mphase:40#` | `Set mphase:OK!` : réduction du moteur | oui |
+| `$MPID:0.8,0.6,0.5#` | `Set MPID:OK!` : régulateur de vitesse (P, I, D), puis la carte redémarre | oui |
 | `$spd:a,b,c,d#` | aucune réponse : consigne de vitesse en **mm/s**, asservie par la carte | oui |
 | `$pwm:a,b,c,d#` | aucune réponse : commande directe ; `$pwm:0,0,0,0#` = arrêt rapide | à 0 seulement |
 | `$read#`, `$speed:...#` | `fail,Command not found!` | oui |
@@ -237,7 +238,7 @@ ros2 run argos_base pont_moteurs --ros-args --params-file ~/Documents/Projet/arg
      arrête bien ses propres nœuds ; le piège est surtout dans les essais à la main.
    - Impact : faible à 0,3 à 0,5 m/s (vitesse prévue en intérieur), compensé par
      l'asservissement ; léger zigzag, corrigé par Nav2 avec le LiDAR.
-7. **Au sol, le robot avance mais ne pivote pas sur place** (2026-11-14, NON RÉSOLU).
+7. **Au sol, le robot avance mais ne pivote pas sur place** (2026-11-14, cause trouvée).
    - Symptôme : marche avant correcte (0,46 m d'odométrie pour 0,5 m demandés, le
      robot a bien avancé). En rotation sur place, rien ne bouge à l'œil.
    - Mesures (odométrie, `cmd_vel` par `pont_moteurs`) :
@@ -248,10 +249,57 @@ ros2 run argos_base pont_moteurs --ros-args --params-file ~/Documents/Projet/arg
      | Rotation 1 rad/s, 1 s | ±0,06 m/s | 0,26 rad/s au plus, 3,8° au lieu de 57° |
      | Rotation 2,5 rad/s, 0,25 s | ±0,15 m/s | 0,18 rad/s au plus, 1,8° au lieu de 36° |
 
-   - Diagnostic en cours : la vitesse lente n'est pas en cause (l'avance à 6 cm/s
-     marche). Les encodeurs montrent que les roues calent dès qu'elles tournent en
-     sens opposés.
-   - Hypothèse principale : frottement latéral des roulettes folles, à environ 15 à
-     20 cm de l'axe des roues. Test à faire : rotation avec les roulettes soulevées.
-   - Scripts d'essai sur le Pi (hors dépôt) : `~/argos_claude/rot.py <rad/s> <s>` et
-     `lin.py <m/s> <s>`, à lancer après `pont_moteurs`.
+   - Fausse piste : « les roues calent en sens opposés, frottement latéral des
+     roulettes folles ». Les roues ne calaient pas : elles n'avaient pas encore démarré.
+   - Diagnostic (2026-11-14, carrelage, carte pilotée sans ROS, environ 300 relevés
+     d'encodeurs par seconde) : la même rotation, prolongée à 4 s, réussit.
+
+     | Consigne par roue | Roues immobiles pendant | Vitesse atteinte après | Résultat |
+     |---|---|---|---|
+     | Rotation ±60 mm/s, 4 s | 0,9 s | 2 s | 170° |
+     | Rotation ±100 mm/s, 4 s | 0,5 s | 1,5 s | 318° (gauche), 326° (droite) |
+     | Rotation ±200 mm/s, 2 s | 0,25 s | 1,2 s | 316° |
+     | Avance 100 mm/s, 2 s | 0,3 s | 1 s | 153 mm |
+
+     Les essais ratés sont reproduits : ±60 mm/s donne 3,6° au bout de 1 s (3,8° la
+     veille), et à ±150 mm/s les roues partent après environ 0,33 s, donc après la
+     fin d'un essai de 0,25 s.
+   - Cause : le régulateur de vitesse de la carte (P 0,8 / I 0,06 / D 0,5) pousse
+     de plus en plus fort tant que la roue n'a pas atteint sa vitesse. Le temps
+     avant le départ est donc inversement proportionnel à la consigne (environ
+     50 mm/s x s en rotation, 30 en ligne droite). La rotation demande 1,6 fois plus
+     d'effort que l'avance (roulettes à pivoter, pneus qui ripent) : c'est la seule
+     part des roulettes dans le problème.
+   - Une fois lancées, les roues suivent mieux : de 100 à 200 mm/s en 0,5 s, de 200
+     à 50 mm/s en 0,8 s. Inversion du sens : arrêt en 0,3 s, puis 0,5 s immobiles
+     avant de repartir. Vitesse établie irrégulière (±20 % autour de la consigne).
+   - Rotation réelle vérifiée avec la caméra (image avant et après, détails
+     superposés) : rotations de 5° justes à 0,1° ; 1 et 2 tours complets : le robot
+     tourne 2 à 3 % de moins que les encodeurs (4 mesures : 0,985, 0,977, 0,980,
+     0,967), soit un entraxe effectif d'environ 122 mm au lieu de 119. Pas de
+     glissement notable.
+   - Solution : aucune pièce à changer, régulateur de la carte réglé avec
+     `$MPID:0.8,0.6,0.5#` (I : 0,06 à 0,6 ; gardé en mémoire flash ; la carte
+     redémarre et il faut redemander `$upload`). Comparaison de 14 réglages sur la
+     même épreuve (`pid_essai.py` : rotation depuis l'arrêt puis inversion) :
+
+     | Rotation, par roue | Réglage | Départ | 90 % de la vitesse | Après inversion : 90 % |
+     |---|---|---|---|---|
+     | ±60 mm/s | I 0,06 (origine) | 0,8 s | 2,1 s | 2,9 s |
+     | ±60 mm/s | I 0,6 | 0,1 s | 0,3 s | 0,3 s |
+     | ±200 mm/s | I 0,06 (origine) | 0,3 s | 1,2 s | 1,6 s |
+     | ±200 mm/s | I 0,6 | 0,1 s | 0,2 s | 0,2 s |
+
+     I 1,0 : à peine plus rapide, dépasse plus la consigne ; I 4 : dépassement de
+     120 %. P doublé ou D changé : pas d'effet net. Irrégularité à vitesse établie
+     inchangée (environ 10 %). Contrôle après réglage : avance de 2 s à 100 mm/s =
+     208 mm (153 avant), tours complets toujours justes à 2 à 3 %, rotation de 8°
+     faite en 0,2 s et confirmée à 0,2° par la caméra.
+     Entraxe passé de 0,119 à 0,122 m dans `config/base.yaml`.
+   - Leçons : un essai plus court que le temps de réponse du système ne mesure
+     rien ; enregistrer la courbe complète (ici la vitesse des roues dans le
+     temps) avant d'accuser la mécanique.
+   - Scripts de mesure (ce dossier, à lancer sur le Pi, sans ROS, `pont_moteurs`
+     arrêté) : `diag_rot.py` (une consigne, roues enregistrées), `seq.py`
+     (consignes enchaînées), `tour.py` (rotation vérifiée par la caméra),
+     `pid_essai.py` (comparaison de réglages du régulateur).
