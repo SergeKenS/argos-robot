@@ -8,3 +8,6 @@ Spec_Materiel/Facture/
 
 # Fichiers générés par Python
 __pycache__/
+
+# Compilations Arduino de flasher.ps1
+essais/tourelle/banc_mesure/build_*/

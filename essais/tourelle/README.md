@@ -29,7 +29,8 @@ Dans l'IDE : carte « ESP32 Dev Module », port COM3, série à 115200 bauds.
 
 ## Paramètres de la tourelle (mesurés)
 
-- Centre du bas : 100°, centre du haut : 30° (caméra droit devant)
+- Centre du bas : 105° depuis la fixation sur le châssis (100° avant, 2026-11-14),
+  centre du haut : 30° (caméra droit devant)
 - Débattement : 45° de part et d'autre du centre, dans 0° à 180°
 - Sens : angle du bas qui augmente = caméra vers la gauche, angle du haut qui
   augmente = caméra vers le haut
@@ -69,6 +70,9 @@ point de comparaison à `banc_mesure/banc.py essai3`.
   l'ESP32), estime la vitesse de l'objet pour viser un peu en avant. Recherche
   en forme de 8 quand l'objet est perdu. Sur le Pi :
   `python3 suivi_fluide.py --camera 0 --sans-fenetre` (image dans /tmp/tourelle.jpg).
+  Options : `--couleur vert|rouge` (vert par défaut), `--flux` (image en direct).
+- `flux_video.py` : image annotée en direct dans un navigateur (MJPEG, port 8081),
+  `http://argos-pi.local:8081`. Provisoire : sur le robot, l'image passera par ROS 2.
 - `banc_mesure/` : outils de mesure (balle immobile, consigne déplacée dans
   l'image) : `banc.py fluide` ou `banc.py essai3`, `jeu2.py` (jeu des servos),
   `retard.py` (retard de l'image), `flasher.ps1` (compiler et téléverser).
@@ -157,7 +161,7 @@ Les deux qui bloquaient tout (la tourelle tournait « au hasard ») :
      changement de sens. Écart entre les deux sens : de 1,35° à 0,1° environ.
      Il reste des pas d'environ 0,4° : d'où la zone morte de 3 px côté PC.
 
-3. **Sur le Pi, le suivi lancé en arrière-plan ne s'arrêtait pas** (2026-11-13).
+4. **Sur le Pi, le suivi lancé en arrière-plan ne s'arrêtait pas** (2026-11-13).
    - Symptôme : `kill -INT` (l'équivalent de Ctrl+C) sans effet, la tourelle
      continuait de suivre.
    - Cause : un programme lancé en tâche de fond (`&`) dans un script ignore Ctrl+C,
@@ -167,6 +171,23 @@ Les deux qui bloquaient tout (la tourelle tournait « au hasard ») :
      Vérifié : lancement en arrière-plan, `pkill -TERM`, arrêt propre en moins de 3 s.
    - Pour le robot : tout nœud lancé sans terminal doit savoir s'arrêter sur SIGTERM
      (c'est ce qu'envoie `ros2 launch` à l'arrêt).
+
+5. **Risque d'ouvrir la carte moteurs à la place de l'ESP32** (2026-11-14).
+   - Symptôme : aucun encore, trouvé à la relecture après avoir branché la carte
+     moteurs sur le Pi.
+   - Cause : le script cherchait l'ESP32 par le seul fabricant de sa puce USB
+     (1A86). La carte moteurs Yahboom a le même fabricant : le premier port trouvé
+     pouvait être le sien, et les ordres de la tourelle partir vers les roues.
+   - Solution : exiger le fabricant ET le modèle (1A86:7523 pour l'ESP32,
+     1A86:7522 pour la carte moteurs).
+
+6. **Le rouge ne convient pas chez l'utilisateur** (2026-11-14).
+   - Symptôme : la caméra ne distinguait plus l'objet.
+   - Diagnostic : histogramme des teintes de l'image : 30 % des pixels dans les
+     rouges et orangés (lumière chaude, murs, bois, peau), aucun vert. Dans une
+     pièce trop sombre, même la table blanche apparaissait rouge saturé.
+   - Solution : objet vert (teinte mesurée 48), option `--couleur`, et un
+     éclairage suffisant. Leçon : choisir la couleur d'après le décor mesuré.
 
 Autres pièges, plus simples :
 
@@ -179,10 +200,9 @@ Autres pièges, plus simples :
 
 ## À améliorer plus tard
 
-- La main est parfois prise pour l'objet (peau sous éclairage chaud). Seuils
-  resserrés dans `suivi_fluide.py` (saturation min 140, teinte 168 à 8) ; à
-  revérifier sous l'éclairage du bâtiment. Le mode SUIVI prévoit des couleurs
-  mesurées sur place (`ETAPES.md`).
+- Couleurs : seuils mesurés chez l'utilisateur (voir problème 6), à revérifier
+  sous l'éclairage du bâtiment. Le mode SUIVI prévoit des couleurs mesurées sur
+  place (`ETAPES.md`).
 
 ## À retenir pour le robot
 
@@ -193,6 +213,11 @@ Autres pièges, plus simples :
   `PSU_MAX_CURRENT=5000` du Pi (voir `essais/alimentation/`).
 
 ## État
+
+2026-11-14 : tourelle fixée sur le châssis (centre du bas 100° vers 105°),
+objet vert suivi depuis le sol : vu sur 30 images par seconde, écart sous 6 px.
+Suite : suivi par le corps et la tête ensemble (déplacement à repenser, voir
+`essais/moteurs/`, problème 7).
 
 Essai 4 validé le 2026-11-13 sur le Raspberry Pi, sur la batterie du robot :
 balle tenue à la main pendant 5 min, 30 images analysées par seconde, recherche

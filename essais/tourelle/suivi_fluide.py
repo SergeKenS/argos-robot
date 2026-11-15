@@ -1,4 +1,4 @@
-"""Garde un objet rouge au centre de l'image, en continu (essai 4).
+"""Garde un objet coloré (vert par défaut) au centre de l'image, en continu (essai 4).
 
 Le PC voit l'objet et envoie la cible à l'ESP32 (suivi_fluide/suivi_fluide.ino),
 qui y amène la tourelle en douceur.
@@ -21,6 +21,8 @@ Sur le Raspberry Pi (pas d'écran) :
   python3 suivi_fluide.py --camera 0 --sans-fenetre
   Quitter avec Ctrl+C. L'image annotée est enregistrée chaque seconde dans
   /tmp/tourelle.jpg (pour la regarder depuis le PC).
+  Image en direct dans un navigateur : ajouter --flux, puis ouvrir
+  http://argos-pi.local:8081 (voir flux_video.py).
 """
 import argparse
 import math
@@ -39,7 +41,7 @@ CAMERA = 1
 LARGEUR, HAUTEUR = 640, 480
 
 # Tourelle : centres et débattement (les mêmes que dans suivi_fluide.ino)
-CENTRE_BAS, CENTRE_HAUT = 100, 30
+CENTRE_BAS, CENTRE_HAUT = 105, 30  # bas : 100 avant la fixation sur le châssis
 AMPLITUDE = 45
 
 # Mesuré : quand l'angle augmente de 1°, l'image glisse de 7,6 px vers la
@@ -77,21 +79,32 @@ AMPLITUDE_RECHERCHE = (40, 20)
 DUREE_RECHERCHE = 6
 PAUSE_RECHERCHE = 5
 
-# Rouge de la balle en HSV (mesuré) : teinte 168 à 180 ou 0 à 8, saturation
-# d'au moins 140, luminosité d'au moins 50
-ROUGE_1 = (np.array([0, 140, 50]), np.array([8, 255, 255]))
-ROUGE_2 = (np.array([168, 140, 50]), np.array([180, 255, 255]))
+# Couleurs reconnues, en HSV : liste de plages (minimum, maximum)
+COULEURS = {
+    # Balle rouge (mesuré) : teinte 168 à 180 ou 0 à 8, saturation d'au moins
+    # 140, luminosité d'au moins 50. À éviter sous une lumière chaude : murs,
+    # bois et peau tombent dans les mêmes teintes.
+    'rouge': [(np.array([0, 140, 50]), np.array([8, 255, 255])),
+              (np.array([168, 140, 50]), np.array([180, 255, 255]))],
+    # Objet vert (mesuré le 2026-11-14 : teinte 48, saturation 154,
+    # luminosité 58) : aucun vert dans le décor.
+    'vert': [(np.array([35, 90, 30]), np.array([80, 255, 255]))],
+}
+# Plages de la couleur suivie (choisie par l'option --couleur)
+PLAGES = COULEURS['vert']
 # Taille minimale de l'objet, en pixels
 AIRE_MIN = 60
 
 
 def trouver_objet(image):
-    """Renvoie (x, y, rayon) de la plus grande tache rouge compacte, ou None.
+    """Renvoie (x, y, rayon) de la plus grande tache compacte de la couleur suivie, ou None.
 
     x et y sont le centre de la tache, plus précis que le pixel.
     """
     hsv = cv2.cvtColor(image, cv2.COLOR_BGR2HSV)
-    masque = cv2.inRange(hsv, *ROUGE_1) | cv2.inRange(hsv, *ROUGE_2)
+    masque = np.zeros(hsv.shape[:2], np.uint8)
+    for minimum, maximum in PLAGES:
+        masque |= cv2.inRange(hsv, minimum, maximum)
     masque = cv2.morphologyEx(masque, cv2.MORPH_OPEN, np.ones((3, 3), np.uint8))
     nombre, _, taches, centres = cv2.connectedComponentsWithStats(masque)
 
@@ -165,8 +178,11 @@ class Tourelle:
     """Liaison avec l'ESP32 : envoie les cibles et retient les positions qu'il annonce."""
 
     def __init__(self):
-        # L'ESP32 se reconnaît à sa puce USB CH340 (identifiant 1A86)
-        port = next((p.device for p in list_ports.comports() if p.vid == 0x1A86), None)
+        # L'ESP32 se reconnaît à sa puce USB CH340 (1A86:7523). La carte moteurs
+        # Yahboom a le même fabricant mais un autre modèle (1A86:7522) : vérifier
+        # les deux numéros, sinon on risque d'ouvrir la carte moteurs.
+        port = next((p.device for p in list_ports.comports()
+                     if (p.vid, p.pid) == (0x1A86, 0x7523)), None)
         if port is None:
             raise SystemExit('ESP32 introuvable : est-il branché ?')
         self.serie = serial.Serial(port, 115200, timeout=0.05)
@@ -278,12 +294,18 @@ def demande_d_arret(*_):
 
 
 def main():
-    arguments = argparse.ArgumentParser(description='Suivi d\'un objet rouge par la tourelle.')
+    global PLAGES
+    arguments = argparse.ArgumentParser(description='Suivi d\'un objet coloré par la tourelle.')
     arguments.add_argument('--camera', type=int, default=CAMERA,
                            help=f'numéro OpenCV de la caméra (défaut : {CAMERA})')
     arguments.add_argument('--sans-fenetre', action='store_true',
                            help='pas de fenêtre (Raspberry Pi) : image dans /tmp/tourelle.jpg')
+    arguments.add_argument('--couleur', choices=sorted(COULEURS), default='vert',
+                           help='couleur de l\'objet suivi (défaut : vert)')
+    arguments.add_argument('--flux', type=int, metavar='PORT', nargs='?', const=8081,
+                           help='image en direct dans un navigateur, sur ce port (défaut : 8081)')
     options = arguments.parse_args()
+    PLAGES = COULEURS[options.couleur]
 
     # Lancé en arrière-plan (sur le Pi), le programme ne reçoit pas Ctrl+C : le
     # système l'ignore pour les tâches de fond. On traite donc aussi la demande
@@ -294,19 +316,28 @@ def main():
     tourelle = Tourelle()
     camera = Camera(options.camera)
     suivi = Suivi()
+    flux = None
+    if options.flux:
+        from flux_video import FluxVideo  # seulement si demandé
+        flux = FluxVideo(options.flux)
     try:
-        boucle(tourelle, camera, suivi, options.sans_fenetre)
+        boucle(tourelle, camera, suivi, options.sans_fenetre, flux)
     except KeyboardInterrupt:
         print('Ctrl+C : arrêt')
     finally:
+        if flux is not None:
+            flux.fermer()
         camera.fermer()
         tourelle.fermer()
         if not options.sans_fenetre:
             cv2.destroyAllWindows()
 
 
-def boucle(tourelle, camera, suivi, sans_fenetre):
-    """Suit l'objet image après image, jusqu'à la touche q (ou Ctrl+C sans fenêtre)."""
+def boucle(tourelle, camera, suivi, sans_fenetre, flux=None):
+    """Suit l'objet image après image, jusqu'à la touche q (ou Ctrl+C sans fenêtre).
+
+    flux : FluxVideo qui diffuse l'image annotée en direct, ou None.
+    """
 
     cible = (CENTRE_BAS, CENTRE_HAUT)
     numero = 0
@@ -340,6 +371,11 @@ def boucle(tourelle, camera, suivi, sans_fenetre):
                     cible = (CENTRE_BAS, CENTRE_HAUT)
                     debut_recherche, fin_pause = None, maintenant + PAUSE_RECHERCHE
         tourelle.viser(*cible)
+
+        if flux is not None:
+            cv2.drawMarker(image, (LARGEUR // 2, HAUTEUR // 2), (255, 255, 255),
+                           cv2.MARKER_CROSS, 20, 1)
+            flux.publier(image)
 
         vues, images = vues + (objet is not None), images + 1
         if maintenant - bilan >= 1:

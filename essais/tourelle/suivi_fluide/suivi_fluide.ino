@@ -39,7 +39,8 @@ const int BROCHE_BAS = 18;
 const int BROCHE_HAUT = 19;
 
 // Centres mesurés sur la monture (caméra droit devant)
-const float CENTRE_BAS = 100;
+// CENTRE_BAS : 100 avant la fixation sur le châssis, 105 depuis (2026-11-14)
+const float CENTRE_BAS = 105;
 const float CENTRE_HAUT = 30;
 
 // Écart maximal autorisé de part et d'autre du centre, pour protéger la monture

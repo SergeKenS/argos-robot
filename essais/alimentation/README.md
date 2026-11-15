@@ -65,6 +65,7 @@ depuis la batterie du robot, avant de tout assembler.
 - Câble en T débranché de la batterie dès qu'on ne mesure plus : sinon ses bouts
   dénudés sont sous tension.
 - Jamais le Pi sur le convertisseur avant d'avoir mesuré 5 V à sa sortie.
+- Batterie débranchée à la fin de chaque séance (voir problème 2).
 
 ## Problèmes rencontrés
 
@@ -91,3 +92,16 @@ depuis la batterie du robot, avant de tout assembler.
      arrière : configuration d'origine gardée dans `~/argos_claude/eeprom_avant_psu.txt`.
    - Source : livre blanc Raspberry Pi « USB Power delivery on Raspberry Pi 5 »
      (RP-009856).
+
+2. **Batterie vidée jusqu'à 6,7 V** (2026-11-14).
+   - Symptôme : 6,7 V au multimètre, soit environ 2,2 V par élément. La fiche
+     Yahboom donne une coupure à 8,1 V, et un élément 18650 ne doit pas descendre
+     sous environ 2,5 V.
+   - Cause probable : batterie restée branchée après la séance. Un Pi « éteint »,
+     le convertisseur et la carte moteurs consomment encore un peu ; en une nuit,
+     cela suffit à la vider.
+   - Solution : recharge immédiate avec le chargeur Yahboom, sous surveillance. La
+     protection s'est réarmée (11 V peu après), aucune chauffe. L'autonomie a pu
+     baisser : à surveiller aux prochains essais.
+   - Pour le robot : interrupteur général dans le câblage définitif. En attendant,
+     débrancher la batterie à la fin de chaque séance.

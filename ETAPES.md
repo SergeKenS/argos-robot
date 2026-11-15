@@ -28,10 +28,10 @@ fonctions nouvelles avant que le robot réel roule. Architecture : `ARCHITECTURE
 
 | Essai | Reste à faire | Réussi quand |
 |---|---|---|
-| Tourelle (`essais/tourelle/`) | ✔ Suivi validé sur le Pi et sur batterie (essai 4) | Suivi validé à la main, mesures dans le README ✔ |
+| Tourelle (`essais/tourelle/`) | ✔ Suivi validé sur le Pi et sur batterie (essai 4) ; fixée sur le châssis, objet vert, image en direct (`--flux`) le 2026-11-14 | Suivi validé à la main, mesures dans le README ✔ |
 | Pi 5 (`essais/raspberry/`) | ✔ Ubuntu Server 24.04, SSH par clé, ROS 2 Jazzy, échange avec le PC | `ros2 topic list` du Pi vu depuis le PC ✔ |
 | LiDAR C1 | Attendu (pas encore reçu). Sur le Pi, avec `rplidar_ros` | `/scan` affiché dans RViz sur le PC |
-| Moteurs et encodeurs (`essais/moteurs/`) | Roues en l'air ✔ (protocole, vitesse à 3 %, nœud `pont_moteurs`, entraxe, rodage) ; reste : essai au sol | Robot sur cales : `cmd_vel` obéi ✔, `/odom` juste à 5 % sur 1 m (au sol) |
+| Moteurs et encodeurs (`essais/moteurs/`) | Roues en l'air ✔ (protocole, vitesse à 3 %, nœud `pont_moteurs`, entraxe, rodage) ; au sol : marche avant ✔, rotation sur place bloquée (problème 7, en cours) | Robot sur cales : `cmd_vel` obéi ✔, `/odom` juste à 5 % sur 1 m (au sol) |
 | Alimentation (`essais/alimentation/`) | Pi sur batterie ✔, tourelle ✔, moteurs 20 min à fond ✔ (Pi jamais sous 5,016 V) ; reste : LiDAR, câblage définitif (fusible, interrupteur, Wago), arrêt d'urgence, autonomie | Pi + LiDAR + moteurs sans redémarrage du Pi ; l'arrêt d'urgence coupe les moteurs |
 
 **Décision moteurs (prise le 2026-11-13).** La carte du châssis Yahboom,

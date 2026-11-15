@@ -237,3 +237,21 @@ ros2 run argos_base pont_moteurs --ros-args --params-file ~/Documents/Projet/arg
      arrête bien ses propres nœuds ; le piège est surtout dans les essais à la main.
    - Impact : faible à 0,3 à 0,5 m/s (vitesse prévue en intérieur), compensé par
      l'asservissement ; léger zigzag, corrigé par Nav2 avec le LiDAR.
+7. **Au sol, le robot avance mais ne pivote pas sur place** (2026-11-14, NON RÉSOLU).
+   - Symptôme : marche avant correcte (0,46 m d'odométrie pour 0,5 m demandés, le
+     robot a bien avancé). En rotation sur place, rien ne bouge à l'œil.
+   - Mesures (odométrie, `cmd_vel` par `pont_moteurs`) :
+
+     | Consigne | Vitesse des roues demandée | Obtenu |
+     |---|---|---|
+     | Avance 0,06 m/s, 1 s | 0,06 m/s | 0,057 m/s : correct |
+     | Rotation 1 rad/s, 1 s | ±0,06 m/s | 0,26 rad/s au plus, 3,8° au lieu de 57° |
+     | Rotation 2,5 rad/s, 0,25 s | ±0,15 m/s | 0,18 rad/s au plus, 1,8° au lieu de 36° |
+
+   - Diagnostic en cours : la vitesse lente n'est pas en cause (l'avance à 6 cm/s
+     marche). Les encodeurs montrent que les roues calent dès qu'elles tournent en
+     sens opposés.
+   - Hypothèse principale : frottement latéral des roulettes folles, à environ 15 à
+     20 cm de l'axe des roues. Test à faire : rotation avec les roulettes soulevées.
+   - Scripts d'essai sur le Pi (hors dépôt) : `~/argos_claude/rot.py <rad/s> <s>` et
+     `lin.py <m/s> <s>`, à lancer après `pont_moteurs`.
