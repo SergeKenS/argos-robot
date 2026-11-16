@@ -209,3 +209,70 @@ répétée, les a fait sortir.
 
 Leçon commune : aucune attente sans limite dans le répartiteur. Toute attente d'un
 autre nœud a un délai et un message d'erreur.
+
+---
+
+# Évolution prévue (PAS EN VIGUEUR)
+
+Proposition du 2026-11-15, acceptée comme direction. **Rien de ce qui suit n'est
+codé. Tout ce qui précède reste la référence** tant que cette partie n'a pas été
+déplacée plus haut.
+
+Quand : après la phase 3 (appel et patrouille validés sur le robot réel). Pas avant.
+
+## Pourquoi
+
+Aujourd'hui, une seule fonctionnalité est active. Combiner deux comportements
+(patrouiller en observant) oblige à en écrire une troisième. Défaut connu des
+machines à états : elles deviennent fragiles en grossissant.
+
+## Principe : organes, compétences, rôles
+
+| Niveau | Définition | Exemples |
+|---|---|---|
+| **Organe** | Ce qui ne se partage pas. Un seul maître à la fois | roues, tête |
+| **Compétence** | Brique réutilisable. Déclare les organes qu'elle prend et ce qu'il lui faut pour démarrer. Finit par « réussi » ou « échec, raison » | aller à un point (roues), balayer (tête), suivre une cible (tête + roues) |
+| **Rôle** | L'état du robot, un seul actif, affiché par la page. Une recette de compétences écrite en données | Appel, Patrouille, Ronde d'observation, Suivi |
+
+Deux façons de combiner, et seulement deux : **en même temps** (organes différents)
+et **l'une après l'autre**. Une recette qui donne un organe à deux compétences en
+même temps est refusée au chargement, par un test automatique.
+
+Correspondance avec aujourd'hui : fonctionnalité → rôle ; outils du robot →
+compétences ; répartiteur → aiguillage, plus l'arbitrage des organes.
+
+## Ce qui ne change pas
+
+- Les trois niveaux, et le robot qui ne dépend jamais du superviseur.
+- La sécurité (chien de garde, arrêt devant un obstacle) reste sous les
+  compétences : toujours active, jamais désactivable par une recette.
+- Sans ROS, testable sans robot : vrai aussi pour les compétences et les recettes.
+- Les commandes et le format de `/argos/etat` : la page n'a pas à changer.
+
+## Place du superviseur
+
+Un utilisateur du répartiteur, comme la page. Deux usages :
+- **Commander** : il choisit un rôle ou une compétence dans la liste ; le
+  répartiteur refuse ce que l'état du robot n'autorise pas.
+- **Observer** : il lit le journal et les mesures après coup, propose un réglage,
+  qui passe par l'utilisateur avant d'aller sur le robot.
+
+Ce qu'il apprend ne reste que si on l'écrit (paramètres, tests, documentation).
+
+## Migration en trois pas, chacun testé
+
+1. Les organes dans le répartiteur (qui tient les roues, qui tient la tête).
+2. Les compétences extraites de Service ; « suivre » et « chercher » reprises de
+   `essais/suivi_corps/`.
+3. Les recettes ; Service devient les rôles Appel et Patrouille.
+
+## Modèles et défauts connus
+
+- **WPILib** (robots de compétition FRC) : le plus proche. Défauts : une
+  composition garde tous ses organes pendant toute sa durée ; l'intérieur d'une
+  composition est moins visible au débogage.
+- **ros2_control** : un seul maître par interface matérielle.
+- **Open-RMF** : tâches décrites en données. **SkiROS2** : compétences composées.
+- **PX4** : modèle actuel (un mode à la fois, l'humain reprend toujours la main).
+- Arbres de comportement : possibles plus tard si les recettes ne suffisent plus ;
+  plus lourds à apprendre et à déboguer.

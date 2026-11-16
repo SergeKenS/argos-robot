@@ -77,6 +77,9 @@ Le robot reste autonome ; le superviseur est un utilisateur de plus.
 3. Ce qui revient souvent devient une fonctionnalité (ex. Observation) et n'a plus
    besoin de lui.
 
+Idées pour après (cas d'usage, interprète de texte, évolution de l'architecture) :
+`PISTES.md`. Rien n'y est décidé.
+
 Limite connue : il décide en secondes, pas en millisecondes. Jamais de pilotage
 direct des moteurs par le superviseur : il donne des objectifs, Nav2 conduit.
 
