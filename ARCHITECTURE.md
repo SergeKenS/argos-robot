@@ -3,7 +3,7 @@
 Réorganisation du 2026-11-13 : 39 tests automatiques sans ROS, et validée en
 simulation le même jour (liste de non-régression à la fin, 25 vérifications sur 25).
 
-But : ajouter une fonctionnalité (Suivi, Observation...) sans toucher aux autres.
+But : ajouter un rôle (Manuel, Suivi, Observation...) sans toucher aux autres.
 
 ## Trois niveaux
 
@@ -15,7 +15,7 @@ Chaque niveau fonctionne sans celui du dessus.
             |  /argos/commande              ^  /argos/etat, /argos/journal, /argos/points
             v                               |
 2. Raspberry Pi 5 : autonomie
-      Répartiteur -> fonctionnalité active -> Nav2, SLAM Toolbox
+      Répartiteur -> rôle actif -> Nav2, SLAM Toolbox
       plus tard : nœuds « regard » (tourelle, vision) et « mémoire »
             |  cmd_vel, cibles de la tourelle   ^  odométrie, positions
             v                                   |
@@ -28,17 +28,18 @@ sa mission et reste en veille.
 
 ## Vocabulaire
 
-- **Fonctionnalité** : un comportement complet du robot. Une seule active à la fois.
-  Aujourd'hui : Service (appel, patrouille) et Cartographie.
-- **Veille** : aucune fonctionnalité active, robot immobile. État au démarrage.
-- **Outils du robot** : ce que le répartiteur offre aux fonctionnalités (aller à un
+- **Rôle** : un mode du robot, un comportement complet. Un seul actif à la fois.
+  Aujourd'hui : Service (appel, patrouille) et Cartographie. Appelé « fonctionnalité »
+  jusqu'au 2026-11-20.
+- **Veille** : aucun rôle actif, robot immobile. État au démarrage.
+- **Outils du robot** : ce que le répartiteur offre aux rôles (aller à un
   point, annuler, signaler, cartes et points, SLAM). Écrits une fois.
 
 ## Paquets
 
 | Paquet | Rôle | Où il tourne |
 |---|---|---|
-| `argos_mission` | Répartiteur et fonctionnalités, lancement (`argos.launch.py`), paramètres Nav2 | PC (simulation), Pi (robot réel) |
+| `argos_mission` | Répartiteur et rôles, lancement (`argos.launch.py`), paramètres Nav2 | PC (simulation), Pi (robot réel) |
 | `argos_web` | Page web (rosbridge + serveur HTTP) | PC, Pi |
 | `argos_base` | Pilotes du robot réel : `pont_moteurs` (carte moteurs Yahboom : `cmd_vel` vers les roues, encodeurs vers `/odom` et `odom -> base_link`, chien de garde) | Pi seulement |
 
@@ -48,26 +49,70 @@ répartiteur : la logique sans ROS (`carte_yahboom.py`, `cinematique.py`) est te
 seule (`python3 -m pytest src/argos_base/test/`). Mesures et réglages :
 `essais/moteurs/README.md`.
 
+## Arborescence cible (décidée le 2026-11-20)
+
+✔ = existe, ★ = à créer pour le rôle Manuel, ○ = plus tard. Chaque fichier est
+créé à sa place, au moment où on l'écrit : pas de fichier vide en attente.
+
+```
+src/
+├── argos_base/              pilotes du vrai robot : tout ce qui parle au matériel
+│   ├── argos_base/
+│   │   ├── pont_moteurs.py      ✔ nœud : roues
+│   │   ├── carte_yahboom.py     ✔ protocole de la carte moteurs, sans ROS
+│   │   ├── cinematique.py       ✔ calculs, sans ROS
+│   │   ├── tourelle.py          ★ nœud : tête
+│   │   ├── liaison_tourelle.py  ★ protocole de l'ESP32, sans ROS
+│   │   └── camera.py            ★ nœud : image diffusée à la page
+│   ├── config/   base.yaml ✔, tourelle.yaml ★
+│   └── test/     tests sans ROS
+│
+├── argos_mission/           autonomie
+│   ├── argos_mission/
+│   │   ├── repartiteur.py       ✔ aiguillage
+│   │   ├── organes.py           ★ qui tient les roues, qui tient la tête
+│   │   ├── cartes.py, cycle_de_vie.py  ✔
+│   │   ├── roles/               les modes du robot
+│   │   │   ├── service.py, cartographie.py  ✔
+│   │   │   ├── manuel.py        ★
+│   │   │   └── suivi.py, observation.py     ○
+│   │   └── competences/         ○ (avec le LiDAR)
+│   ├── launch/   argos.launch.py ✔ (simulation), robot.launch.py ★ (vrai robot)
+│   └── test/
+│
+└── argos_web/               l'application (téléphone, tablette, PC)
+    └── web/                 servi tel quel, sans étape de compilation
+        ├── index.html           squelette de la page
+        ├── style.css            ★ apparence
+        ├── app.js               ★ connexion au robot, état, choix du panneau
+        ├── panneaux/            ★ un fichier par rôle : service.js, cartographie.js, manuel.js
+        └── outils/joystick.js   ★
+
+firmware/tourelle/           ★ programme de l'ESP32 (repris de essais/tourelle/)
+```
+
+Les fichiers marqués « OBSOLÈTE » seront supprimés au nettoyage.
+
 ## Fichiers (`src/argos_mission/argos_mission/`)
 
-| Fichier | Rôle | Dépend de ROS |
+| Fichier | Ce qu'il fait | Dépend de ROS |
 |---|---|---|
 | `repartiteur.py` | Nœud ROS : reçoit les commandes, les aiguille, publie l'état. Fournit les outils du robot | oui |
-| `fonctionnalites/__init__.py` | Le modèle commun `Fonctionnalite` et les règles | non |
-| `fonctionnalites/service.py` | Appel, base, patrouille, échec | non |
-| `fonctionnalites/cartographie.py` | Nouvelle carte : enregistrer ou abandonner | non |
+| `roles/__init__.py` | Le modèle commun `Role` et les règles | non |
+| `roles/service.py` | Appel, base, patrouille, échec | non |
+| `roles/cartographie.py` | Nouvelle carte : enregistrer ou abandonner | non |
 | `cartes.py` | Cartes, points nommés, patrouille, fichiers YAML | non |
 | `cycle_de_vie.py` | Démarrer et arrêter Nav2 et SLAM Toolbox (ancien `cartographie.py`) | oui |
 
 Ce qui ne dépend pas de ROS se teste sur n'importe quel PC, en une seconde :
 ```
-python3 -m pytest src/argos_mission/test/test_fonctionnalites.py src/argos_mission/test/test_repartiteur.py
+python3 -m pytest src/argos_mission/test/test_roles.py src/argos_mission/test/test_repartiteur.py
 ```
 (`test_repartiteur.py` exécute le vrai `repartiteur.py` avec un faux ROS.)
 
-## Contrat d'une fonctionnalité
+## Contrat d'un rôle
 
-Une classe qui hérite de `Fonctionnalite` :
+Une classe qui hérite de `Role` :
 
 | Élément | Rôle |
 |---|---|
@@ -82,27 +127,27 @@ Une classe qui hérite de `Fonctionnalite` :
 | `etat()` | Texte publié sur `/argos/etat`. `None` = elle a fini, retour en veille |
 
 Règles :
-1. Une fonctionnalité ne connaît pas les autres et n'importe pas ROS. Elle
+1. Un rôle ne connaît pas les autres et n'importe pas ROS. Il
    n'utilise que les outils du robot.
 2. Seul le répartiteur passe de l'une à l'autre, toujours par `sortir()`.
 3. Les réceptions de messages notent, la boucle principale agit (imposé par
    BasicNavigator).
 4. Ce qui est lent ou lourd (vision, IA) tourne dans un nœud ROS séparé, démarré
-   au besoin. La fonctionnalité dirige, elle ne calcule pas.
-5. Ajouter une fonctionnalité = un fichier + une ligne dans `FONCTIONNALITES`
+   au besoin. Le rôle dirige, il ne calcule pas.
+5. Ajouter un rôle = un fichier + une ligne dans `ROLES`
    (`repartiteur.py`) + ses tests. Plus un panneau dans la page si elle a des
    boutons.
 
 ## Aiguillage d'une commande
 
-1. Une fonctionnalité exclusive est active et la commande n'est pas à elle : refus.
-2. `veille` : quitter la fonctionnalité active.
+1. Un rôle exclusif est actif et la commande n'est pas à lui : refus.
+2. `veille` : quitter le rôle actif.
 3. Commande commune (`ajouter`, `supprimer`, `definir_patrouille`, `carte`,
    `redemarrer_navigation`) : outil du répartiteur.
-4. Sinon, la fonctionnalité qui comprend la commande. Si elle n'est pas active :
+4. Sinon, le rôle qui comprend la commande. S'il n'est pas actif :
    on quitte l'active et on entre dans celle-ci, à condition que la commande soit
    une de ses `entrees`.
-5. Après chaque action : si la fonctionnalité active n'a plus d'état, retour en
+5. Après chaque action : si le rôle actif n'a plus d'état, retour en
    veille ; puis l'état est publié s'il a changé.
 
 Les commandes et le format de `/argos/etat` sont **les mêmes qu'avant** : la page
@@ -112,12 +157,12 @@ web n'a pas été modifiée.
 
 Par rapport à la proposition du 2026-11-12 et au code d'avant :
 
-- **Pas de commande `activer <fonctionnalité>`.** Une commande démarre elle-même sa
-  fonctionnalité (`appel alpha` démarre Service). Un seul message au lieu de deux,
+- **Pas de commande `activer <rôle>`.** Une commande démarre elle-même son
+  rôle (`appel alpha` démarre Service). Un seul message au lieu de deux,
   et rien ne change pour la page ni pour un autre client.
 - **`/argos/etat` garde son format.** Le changer obligeait à modifier la page et le
   répartiteur d'un coup, sans pouvoir tester l'un sans l'autre.
-- **Les fonctionnalités n'importent pas ROS.** Avant, toute la logique vivait dans
+- **Les rôles n'importent pas ROS.** Avant, toute la logique vivait dans
   un nœud de 487 lignes, testable seulement en simulation. C'était la dette la
   plus coûteuse : chaque changement demandait de relancer Gazebo.
 - **`ECHEC` appartient à Service**, pas au robot entier. Il reste publié tel quel.
@@ -136,16 +181,16 @@ Points faibles connus, non traités ici (voir la feuille de route dans `ETAPES.m
 
 ## Brancher la suite
 
-- **Suivi** : `fonctionnalites/suivi.py` + un nœud « regard » (caméra, tourelle,
-  repris de `essais/tourelle/suivi_fluide.py`). La fonctionnalité reçoit la
+- **Suivi** : `roles/suivi.py` + un nœud « regard » (caméra, tourelle,
+  repris de `essais/tourelle/suivi_fluide.py`). Le rôle reçoit la
   direction de la cible par un topic et demande les trajets avec les outils du robot.
 - **Observation** : parcourt des points, demande au nœud « regard » de balayer, au
   nœud « mémoire » de noter ce qui est vu.
 - **Superviseur** : aucun code dans le répartiteur. Il lui faut seulement un
   accès (SSH), une image à la demande et une page protégée.
-- **Sélecteur et panneaux par fonctionnalité dans la page** : à faire quand une
-  troisième fonctionnalité arrive, pas avant. Principe retenu : chaque panneau
-  marqué `data-fonctionnalite`, une règle CSS n'affiche que celui de l'active
+- **Sélecteur et panneaux par rôle dans la page** : à faire avec le troisième
+  rôle (Manuel). Principe retenu : chaque panneau
+  marqué `data-role`, une règle CSS n'affiche que celui de l'active
   (généralise `body.cartographie .hors-carto`).
 
 ## Fichiers obsolètes
@@ -222,7 +267,7 @@ Quand : après la phase 3 (appel et patrouille validés sur le robot réel). Pas
 
 ## Pourquoi
 
-Aujourd'hui, une seule fonctionnalité est active. Combiner deux comportements
+Aujourd'hui, un seul rôle est actif. Combiner deux comportements
 (patrouiller en observant) oblige à en écrire une troisième. Défaut connu des
 machines à états : elles deviennent fragiles en grossissant.
 
@@ -238,8 +283,9 @@ Deux façons de combiner, et seulement deux : **en même temps** (organes diffé
 et **l'une après l'autre**. Une recette qui donne un organe à deux compétences en
 même temps est refusée au chargement, par un test automatique.
 
-Correspondance avec aujourd'hui : fonctionnalité → rôle ; outils du robot →
-compétences ; répartiteur → aiguillage, plus l'arbitrage des organes.
+Correspondance avec aujourd'hui : outils du robot → compétences ; répartiteur →
+aiguillage, plus l'arbitrage des organes. Le pas 1 (organes) commence avec le
+rôle Manuel (décision du 2026-11-20).
 
 ## Ce qui ne change pas
 

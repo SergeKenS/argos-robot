@@ -6,11 +6,11 @@ fonctions nouvelles avant que le robot réel roule. Architecture : `ARCHITECTURE
 | Phase | Contenu | État |
 |---|---|---|
 | 0. Simulation | Étapes 1 à 6 plus bas : clavier, SLAM, Nav2, points, répartiteur, page web | Fait |
-| 1. Base logicielle | Répartiteur en fonctionnalités, tests automatiques | Validé en simulation (2026-11-13) ; reste 2 et 3 |
+| 1. Base logicielle | Répartiteur en rôles (ex-fonctionnalités), tests automatiques | Validé en simulation (2026-11-13) ; reste 2 et 3 |
 | 2. Essais par composant | Tourelle, Pi 5, LiDAR, moteurs, alimentation | Tourelle, Pi, moteurs (roues en l'air) ✔ ; LiDAR attendu |
 | 3. Robot réel | Assemblage, pilotes, refaire les étapes 1 à 6 sur le vrai robot | À venir |
-| 4. Tête | Tourelle sur le robot, nœud « regard », fonctionnalité Suivi | À venir |
-| 5. Supervision | Claude comme superviseur, fonctionnalité Observation | À venir |
+| 4. Tête | Tourelle sur le robot, nœud « regard », rôle Suivi | À venir |
+| 5. Supervision | Claude comme superviseur, rôle Observation | À venir |
 
 ## Phase 1 : base logicielle
 
@@ -64,7 +64,7 @@ boucle d'un microcontrôleur, et ne pas inonder la carte d'ordres.
 1. Nœud « regard » sur le Pi : reprend `essais/tourelle/suivi_fluide.py` (vision,
    direction de la cible). La tourelle garde son croquis `suivi_fluide.ino` et son
    protocole texte, qui marche : micro-ROS seulement s'il apporte quelque chose.
-2. Fonctionnalité Suivi (`fonctionnalites/suivi.py`) : détails dans « Pistes notées ».
+2. Rôle Suivi (`roles/suivi.py`) : détails dans « Pistes notées ».
 3. Image à la demande sur la page (une photo, pas forcément un flux).
 
 ## Phase 5 : supervision
@@ -74,7 +74,7 @@ Le robot reste autonome ; le superviseur est un utilisateur de plus.
 1. Accès : SSH vers le Pi, page protégée.
 2. Tâches de Claude, par séances : surveiller une patrouille (journal, une photo de
    temps en temps), identifier un objet inconnu, régler et mesurer, développer.
-3. Ce qui revient souvent devient une fonctionnalité (ex. Observation) et n'a plus
+3. Ce qui revient souvent devient un rôle (ex. Observation) et n'a plus
    besoin de lui.
 
 Idées pour après (cas d'usage, interprète de texte, évolution de l'architecture) :
@@ -159,7 +159,7 @@ ros2 run argos_mission aller_a alpha
 - `maps/arene_points.yaml` : points + ordre de patrouille (un fichier par carte)
 - `argos_mission/repartiteur.py` : états VEILLE / APPEL / PATROUILLE (+ ECHEC).
   Ne recalcule le chemin que s'il devient bloqué. Depuis le 2026-11-13, la logique
-  est rangée par fonctionnalité (`fonctionnalites/service.py`), voir `ARCHITECTURE.md`.
+  est rangée par rôle (`roles/service.py`), voir `ARCHITECTURE.md`.
 - `config/nav2_params.yaml` : copie des paramètres Nav2, marge d'obstacle
   `inflation_radius` 0.70 → **0.25** (jamais sous 0.22, le rayon du robot)
 

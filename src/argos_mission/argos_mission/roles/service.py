@@ -1,4 +1,4 @@
-"""Fonctionnalité Service : aller à un point sur appel, ou patrouiller.
+"""Rôle Service : aller à un point sur appel, ou patrouiller.
 
 États publiés (inchangés pour la page web) :
   « APPEL <point> »      : en route vers le point demandé
@@ -8,10 +8,10 @@ Arrivé au point d'un appel, le robot repasse en VEILLE sur place.
 
 Commandes : « appel <point> », « base » (= « appel base »), « patrouille ».
 """
-from argos_mission.fonctionnalites import Fonctionnalite
+from argos_mission.roles import Role
 
 
-class Service(Fonctionnalite):
+class Service(Role):
     """Appels et patrouille."""
 
     nom = 'Service'

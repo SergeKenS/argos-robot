@@ -1,13 +1,13 @@
-"""Tests des fonctionnalités et des cartes, sans ROS ni simulation.
+"""Tests des rôles et des cartes, sans ROS ni simulation.
 
 Un faux robot remplace le répartiteur : il note ce qu'on lui demande.
-Lancer : python3 -m pytest src/argos_mission/test/test_fonctionnalites.py
+Lancer : python3 -m pytest src/argos_mission/test/test_roles.py
 """
 import os
 
 from argos_mission.cartes import Cartes
-from argos_mission.fonctionnalites.cartographie import Cartographie
-from argos_mission.fonctionnalites.service import Service
+from argos_mission.roles.cartographie import Cartographie
+from argos_mission.roles.service import Service
 import pytest
 
 POINTS = """\

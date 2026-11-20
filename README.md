@@ -8,7 +8,7 @@ en simulation (Gazebo). Le matériel est en cours de réception et d'essai.
 
 Où lire quoi :
 - `ETAPES.md` : la feuille de route, puis les commandes de chaque étape réalisée
-- `ARCHITECTURE.md` : comment le code est organisé, comment ajouter une fonctionnalité
+- `ARCHITECTURE.md` : comment le code est organisé, comment ajouter un rôle (mode du robot)
 - `INSTALLATION.md` : installer le projet sur un PC neuf
 - `MATERIEL.md` (estimation de départ) et `Spec_Materiel/Cout.md` (achats réels)
 - `essais/` : chaque composant essayé seul, avec ses mesures et ses problèmes résolus

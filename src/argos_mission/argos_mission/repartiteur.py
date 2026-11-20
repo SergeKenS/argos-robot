@@ -1,19 +1,19 @@
-"""Répartiteur : reçoit les commandes et les confie à la bonne fonctionnalité.
+"""Répartiteur : reçoit les commandes et les confie au bon rôle.
 
-Une seule fonctionnalité active à la fois (dossier fonctionnalites/) :
+Un seul rôle actif à la fois (dossier roles/) :
   Service      : « appel <point> », « base », « patrouille »
   Cartographie : « cartographier », puis « enregistrer <nom> » ou « abandonner »
-Aucune active = VEILLE : le robot ne fait rien (état de repos sûr, état au démarrage).
+Aucun actif = VEILLE : le robot ne fait rien (état de repos sûr, état au démarrage).
 
 Commandes communes, traitées ici (texte sur /argos/commande) :
-  « veille »                   : arrête la fonctionnalité active
+  « veille »                   : arrête le rôle actif
   « ajouter <nom> »            : enregistre la position actuelle du robot
   « ajouter <nom> <x> <y> »    : enregistre un point choisi sur la carte
   « supprimer <nom> »
   « definir_patrouille <nom> <nom>... » : ordre de patrouille (vide = aucune)
   « carte <nom> »              : charge maps/<nom>.yaml et ses points maps/<nom>_points.yaml
   « redemarrer_navigation »    : relance Nav2 si son démarrage a avorté
-Toute autre commande va à la fonctionnalité qui la comprend.
+Toute autre commande va au rôle qui la comprend.
 
 Publié :
   /argos/etat    : « VEILLE », « APPEL alpha », « PATROUILLE beta », « ECHEC alpha »,
@@ -40,11 +40,11 @@ from std_msgs.msg import String
 
 from argos_mission import cycle_de_vie
 from argos_mission.cartes import Cartes, ORIGINE
-from argos_mission.fonctionnalites.cartographie import Cartographie
-from argos_mission.fonctionnalites.service import Service
+from argos_mission.roles.cartographie import Cartographie
+from argos_mission.roles.service import Service
 
-# Les fonctionnalités du robot. En ajouter une = une ligne ici.
-FONCTIONNALITES = [Service, Cartographie]
+# Les rôles du robot. En ajouter un = une ligne ici.
+ROLES = [Service, Cartographie]
 
 # Arbre de comportement fourni par Nav2 : il ne recalcule le chemin que si le
 # chemin actuel devient bloqué. Évite que le robot hésite entre deux chemins
@@ -82,8 +82,8 @@ class Repartiteur(BasicNavigator):
         if self.cartes.charger():
             self.signaler('avertissement', 'Points de patrouille inconnus ignorés.')
 
-        self.fonctionnalites = [classe(self) for classe in FONCTIONNALITES]
-        self.active = None             # fonctionnalité active (None = VEILLE)
+        self.roles = [classe(self) for classe in ROLES]
+        self.active = None             # rôle actif (None = VEILLE)
         self.trajet_en_cours = False   # Nav2 conduit le robot vers un point
         self.etat_publie = None
         self.commande_en_attente = None
@@ -175,7 +175,7 @@ class Repartiteur(BasicNavigator):
             else:
                 outil(mots[1:])
         else:
-            cible = next((f for f in self.fonctionnalites if action in f.commandes), None)
+            cible = next((f for f in self.roles if action in f.commandes), None)
             if cible is None:
                 self.signaler('avertissement', f'Commande inconnue : « {texte} »')
             elif cible is not active and action not in cible.entrees:
@@ -186,7 +186,7 @@ class Repartiteur(BasicNavigator):
         self.faire_le_point()
 
     def fin_de_trajet(self):
-        """Nav2 a terminé le trajet : la fonctionnalité active décide de la suite."""
+        """Nav2 a terminé le trajet : le rôle actif décide de la suite."""
         self.trajet_en_cours = False
         resultat = {TaskResult.SUCCEEDED: 'reussi',
                     TaskResult.CANCELED: 'annule'}.get(self.getResult(), 'echec')
@@ -195,7 +195,7 @@ class Repartiteur(BasicNavigator):
         self.faire_le_point()
 
     def basculer(self, nouvelle):
-        """Quitte la fonctionnalité active et entre dans la nouvelle (None = veille)."""
+        """Quitte le rôle actif et entre dans le nouveau (None = veille)."""
         if nouvelle is self.active:
             return True
         if self.active is not None:
@@ -207,7 +207,7 @@ class Repartiteur(BasicNavigator):
         return True
 
     def faire_le_point(self):
-        """Après chaque action : retour en veille si la fonctionnalité a fini, puis état."""
+        """Après chaque action : retour en veille si le rôle a fini, puis état."""
         if self.active is not None and self.active.etat() is None:
             self.active.sortir()
             self.active = None
@@ -220,7 +220,7 @@ class Repartiteur(BasicNavigator):
             self.pub_etat.publish(String(data=texte))
             self.get_logger().info(f'État : {texte}')
 
-    # --- Outils du robot (les seuls que les fonctionnalités utilisent) ----------
+    # --- Outils du robot (les seuls que les rôles utilisent) -------------------
     # self.cartes en fait partie : points, patrouille, cartes disponibles.
 
     def signaler(self, niveau, texte):

@@ -1,4 +1,4 @@
-"""Fonctionnalité Cartographie : dessiner une nouvelle carte (SLAM Toolbox).
+"""Rôle Cartographie : dessiner une nouvelle carte (SLAM Toolbox).
 
 État publié : « CARTOGRAPHIE ». Le robot se promène au pilotage manuel (page web).
 Tant qu'elle est active, on ne peut que la terminer :
@@ -10,10 +10,10 @@ Elle démarre avec « cartographier ».
 Le démarrage et l'arrêt de SLAM Toolbox sont des outils du robot (voir
 cycle_de_vie.py) : ce fichier ne décide que de l'enchaînement.
 """
-from argos_mission.fonctionnalites import Fonctionnalite
+from argos_mission.roles import Role
 
 
-class Cartographie(Fonctionnalite):
+class Cartographie(Role):
     """Création d'une carte."""
 
     nom = 'Cartographie'
