@@ -203,7 +203,7 @@ function demarrerVideo() {
   const image = $("video");
   clearTimeout(relanceVideo);
   image.onerror = () => {
-    image.hidden = true;
+    image.classList.remove("visible");
     $("message-video").hidden = false;
     $("message-video").textContent = "IMAGE INDISPONIBLE · NOUVEL ESSAI DANS 3 S";
     $("en-direct").textContent = "SANS IMAGE";
@@ -213,10 +213,11 @@ function demarrerVideo() {
   // Le paramètre t évite qu'un ancien flux en cache soit réutilisé.
   image.src = `http://${location.hostname || "localhost"}:${PORT_VIDEO}/flux?t=${Date.now()}`;
   // Un flux MJPEG ne signale pas chaque image : on regarde si une image est arrivée.
+  // (L'image reste dans la page, transparente : cachée par « hidden », Chrome ne la décode pas.)
   clearInterval(surveillanceVideo);
   surveillanceVideo = setInterval(() => {
-    if (image.naturalWidth > 0 && image.hidden) {
-      image.hidden = false;
+    if (image.naturalWidth > 0 && !image.classList.contains("visible")) {
+      image.classList.add("visible");
       $("message-video").hidden = true;
       $("en-direct").textContent = "EN DIRECT · CAMÉRA";
       $("en-direct").classList.remove("coupe");
@@ -230,7 +231,7 @@ function arreterVideo() {
   const image = $("video");
   image.onerror = null;
   image.removeAttribute("src");   // ferme la connexion au flux
-  image.hidden = true;
+  image.classList.remove("visible");
   $("message-video").hidden = false;
   $("message-video").textContent = "IMAGE DE LA CAMÉRA";
 }

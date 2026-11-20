@@ -232,7 +232,8 @@ details.bloc[open] > summary::after { content: "−"; }
   background: #0E151B; border: 1px solid var(--bord-doux); overflow: hidden;
   touch-action: none; user-select: none; -webkit-user-select: none;
 }
-.vue-camera > img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: contain; }
+.vue-camera > img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: contain; opacity: 0; }
+.vue-camera > img.visible { opacity: 1; }
 .hud { position: absolute; z-index: 3; pointer-events: none; }
 .hud button, .actif-souris { pointer-events: auto; }
 .hud-texte { font-family: var(--mono); font-size: 14px; color: var(--texte-2); text-shadow: 0 0 4px #000; }
