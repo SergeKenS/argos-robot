@@ -70,6 +70,8 @@ function initialiser(r) {
   robot.ecouter("deconnexion", () => { stop(); topicCorps = topicTete = null; majVoile(); });
   robot.ecouter("etat", () => { if (!commandesPermises()) stop(); majVoile(); });
   robot.ecouter("vitesse", afficherVitesse);
+  // Le cadre des règles suit l'image quand la fenêtre change de taille (ou de sens).
+  new ResizeObserver(placerCadre).observe($("vue-camera"));
 
   // ----- Clavier -----
   document.addEventListener("keydown", (e) => {
@@ -198,6 +200,20 @@ function afficherVitesse({ avance, rotation }) {
   $("roues-rotation").textContent = `${Math.round(degres)} °/s`;
 }
 
+// Place le cadre des règles exactement sur l'image affichée. L'image garde ses
+// proportions (4:3 pour 640 x 480) : sur un écran plus large, des bandes noires
+// apparaissent à gauche et à droite, et les règles ne doivent pas y tomber.
+function placerCadre() {
+  const vue = $("vue-camera"), image = $("video"), cadre = $("cadre-image");
+  const proportion = image.naturalWidth > 0 ? image.naturalWidth / image.naturalHeight : 4 / 3;
+  const l = vue.clientWidth, h = vue.clientHeight;
+  const largeur = Math.min(l, h * proportion), hauteur = largeur / proportion;
+  cadre.style.width = `${largeur}px`;
+  cadre.style.height = `${hauteur}px`;
+  cadre.style.left = `${(l - largeur) / 2}px`;
+  cadre.style.top = `${(h - hauteur) / 2}px`;
+}
+
 // Sur un clavier AZERTY, W A S D sont à la place de Z Q S D : on affiche la vraie
 // lettre si le navigateur sait la donner (Chrome, Edge). Sinon, on garde W A S D.
 async function nommerTouches(touches, croix) {
@@ -235,6 +251,7 @@ function demarrerVideo() {
   surveillanceVideo = setInterval(() => {
     if (image.naturalWidth > 0 && !image.classList.contains("visible")) {
       image.classList.add("visible");
+      placerCadre();
       $("message-video").hidden = true;
       $("en-direct").textContent = "EN DIRECT · CAMÉRA";
       $("en-direct").classList.remove("coupe");

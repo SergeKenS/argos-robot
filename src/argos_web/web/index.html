@@ -156,13 +156,24 @@
       <div class="hud hud-texte en-direct coupe" id="en-direct">SANS IMAGE</div>
       <div class="hud sans-lidar">SANS LIDAR · CONDUITE À VUE</div>
 
-      <div class="hud regle" role="img" aria-label="Orientation de la tête par rapport au corps" id="regle">
-        <span class="titre-regle">TÊTE PAR RAPPORT AU CORPS</span>
-        <div class="graduations" id="graduations"></div>
-        <div class="curseur-zone">
-          <div class="curseur" id="curseur-tete">
-            <svg width="12" height="8" viewBox="0 0 12 8" aria-hidden="true"><polygon points="6 0 12 8 0 8" fill="currentColor"/></svg>
-            <span id="texte-tete">--</span>
+      <!-- Cadre posé exactement sur l'image affichée (calculé par manuel.js) :
+           les deux règles de la tête restent sur l'image, pas dans les bandes noires. -->
+      <div class="cadre-image" id="cadre-image">
+        <div class="regle" role="img" aria-label="Orientation de la tête par rapport au corps" id="regle">
+          <span class="titre-regle">TÊTE PAR RAPPORT AU CORPS</span>
+          <div class="graduations" id="graduations"></div>
+          <div class="curseur-zone">
+            <div class="curseur" id="curseur-tete">
+              <svg width="12" height="8" viewBox="0 0 12 8" aria-hidden="true"><polygon points="6 0 12 8 0 8" fill="currentColor"/></svg>
+              <span id="texte-tete">--</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="inclinaison" role="img" aria-label="Inclinaison de la tête par rapport au corps">
+          <div class="chiffres"><span class="nom">HAUT / BAS</span><span class="grand" id="texte-inclinaison">--</span></div>
+          <div class="echelle" id="graduations-verticales">
+            <svg class="repere" id="repere-inclinaison" width="10" height="12" viewBox="0 0 10 12" aria-hidden="true"><polygon points="10 6 0 0 0 12" fill="#7FD4C8"/></svg>
           </div>
         </div>
       </div>
@@ -177,13 +188,6 @@
       <div class="hud jauge" role="img" aria-label="Vitesse d'avance du robot">
         <div class="tube"><div class="niveau" id="niveau-vitesse"></div></div>
         <div class="chiffres"><span class="nom">AVANCE</span><span class="grand" id="jauge-vitesse">--</span><span class="unite">m/s</span></div>
-      </div>
-
-      <div class="hud inclinaison" role="img" aria-label="Inclinaison de la tête par rapport au corps">
-        <div class="chiffres"><span class="nom">HAUT / BAS</span><span class="grand" id="texte-inclinaison">--</span></div>
-        <div class="echelle" id="graduations-verticales">
-          <svg class="repere" id="repere-inclinaison" width="10" height="12" viewBox="0 0 10 12" aria-hidden="true"><polygon points="10 6 0 0 0 12" fill="#7FD4C8"/></svg>
-        </div>
       </div>
 
       <!-- Souris et clavier : deux croix de boutons -->
