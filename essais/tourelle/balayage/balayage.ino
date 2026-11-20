@@ -19,7 +19,7 @@ const int BROCHE_HAUT = 19;
 
 // Centre de chaque servo : l'angle où la caméra regarde droit devant.
 // À ajuster selon le montage (90 si les bras ont été fixés à 90°).
-const int CENTRE_BAS = 100;
+const int CENTRE_BAS = 105;
 const int CENTRE_HAUT = 30;
 
 // Balayage de part et d'autre du centre, pour ne pas forcer contre la monture

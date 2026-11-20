@@ -78,6 +78,16 @@ ros2 launch argos_mission argos.launch.py rviz:=true
 ```
 Gazebo et RViz s'ouvrent, la page web répond sur http://localhost:8080.
 
+## 7. Lancer le suivi de l'objet vert sur le robot
+
+Depuis le PC Windows (PowerShell), se connecter au Pi puis lancer l'essai :
+```
+ssh -i $HOME\.ssh\id_ed25519_argos serge@argos-pi.local
+cd ~/Documents/Projet/argos_ws/essais/suivi_corps
+python3 tete_corps.py --essai rejoindre --duree 60 --flux --discret
+```
+Image en direct : http://argos-pi.local:8081
+
 ## Sources
 
 - [ROS 2 Jazzy, installation Ubuntu](https://docs.ros.org/en/jazzy/Installation/Ubuntu-Install-Debs.html)
