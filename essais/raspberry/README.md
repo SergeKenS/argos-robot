@@ -71,6 +71,38 @@ simulation du PC voient les topics l'un de l'autre (deux `/cmd_vel`, deux `/scan
 Quand le robot réel et la simulation tourneront en même temps, donner un
 ROS_DOMAIN_ID différent à la simulation.
 
+## Paquets pour l'application (2026-11-20)
+
+But : faire tourner sur le Pi le répartiteur et la page web, pour le rôle Manuel,
+sans attendre le LiDAR.
+
+Choix : **pas** le paquet complet `ros-jazzy-navigation2`. Il dépend de
+`nav2_rviz_plugins`, donc de RViz et de Qt, inutiles sur un Pi sans écran.
+`ros-jazzy-nav2-bringup` est pire (722 paquets, Gazebo compris). On installe
+seulement ce que le code importe :
+```
+sudo apt install ros-jazzy-nav2-simple-commander ros-jazzy-rosbridge-server ros-jazzy-nav2-bt-navigator
+```
+(3 + 9 + 31 paquets, aucun graphique). `nav2_bt_navigator` est lu par
+`repartiteur.py` au démarrage (arbre de comportement) et servira à la phase 3.
+Le reste de Nav2 (contrôleur, planificateur, AMCL...) et SLAM Toolbox : avec le LiDAR.
+
+Compilation : `colcon build --symlink-install --packages-select argos_base argos_mission argos_web`.
+Vérifié : 49 tests passent sur le Pi ; le répartiteur démarre sans Nav2 (VEILLE,
+points lus) ; la page répond (ports 8080 et 9090).
+Mesure au repos : rosbridge 80 Mo de mémoire, 14 % d'un cœur au démarrage ;
+serveur HTTP 18 Mo.
+
+Veille : rosbridge (Python) est connu pour être lent avec de gros messages. Règle
+retenue : la vidéo ne passe **pas** par rosbridge (flux MJPEG direct du nœud
+caméra), rosbridge ne transporte que des petits messages (commandes, état,
+journal). Remplaçant possible si besoin, compatible avec roslibjs : RWS
+(C++, https://github.com/v-kiniv/rws). foxglove_bridge est plus rapide mais ne
+parle pas le protocole de roslibjs.
+
+Piège : `pkill -f "ros2 launch argos_web"` lancé dans une commande SSH qui contient
+ce même texte tue aussi la session SSH. Arrêter par numéro de processus (`kill <pid>`).
+
 ## État
 
 2026-11-13 : étapes 1 à 5 faites. Le Pi tourne sur la microSD, joignable en SSH,
