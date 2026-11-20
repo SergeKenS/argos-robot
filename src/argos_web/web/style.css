@@ -353,7 +353,7 @@ button.stop {
   .regle { top: 16px; }
   .regle .titre-regle { display: none; }
   .en-direct { top: 70px; }
-  .sans-lidar { top: 64px; }
+  .sans-lidar { top: 100px; left: 26px; right: auto; }   /* à gauche : la règle haut / bas occupe la droite */
   .jauge { display: none; }
   .inclinaison .grand { font-size: 18px; }
   .joystick { width: 124px; height: 124px; }
