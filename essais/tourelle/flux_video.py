@@ -39,7 +39,8 @@ class FluxVideo:
 
         class Requete(BaseHTTPRequestHandler):
             def do_GET(self):
-                if self.path == '/flux':
+                # Le chemin peut porter un paramètre (ex. /flux?t=123, pour éviter le cache)
+                if self.path.split('?')[0] == '/flux':
                     flux.envoyer(self)
                 else:
                     self.send_response(200)
