@@ -149,6 +149,10 @@
       <button class="hud menu icone actif-souris" id="btn-menu" type="button" aria-label="Afficher le menu">
         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><line x1="4" y1="7" x2="20" y2="7"/><line x1="4" y1="12" x2="20" y2="12"/><line x1="4" y1="17" x2="20" y2="17"/></svg>
       </button>
+      <div class="hud actions-tete seulement-tactile">
+        <button class="principal petit commande" id="btn-recentrer-hud" type="button" aria-label="Recentrer la tête">Recentrer</button>
+        <button class="orange petit commande" id="btn-aligner-hud" type="button" aria-label="Aligner le corps sur la tête">Aligner</button>
+      </div>
       <div class="hud hud-texte en-direct coupe" id="en-direct">SANS IMAGE</div>
       <div class="hud sans-lidar">SANS LIDAR · CONDUITE À VUE</div>
 
@@ -231,7 +235,7 @@
       <h2>Roues</h2>
       <div class="ligne"><span>Avance</span><span class="valeur" id="roues-avance">--</span></div>
       <div class="ligne"><span>Rotation</span><span class="valeur" id="roues-rotation">--</span></div>
-      <p class="aide seulement-souris">Maj enfoncée : vitesse maximale (0,3 m/s).</p>
+      <p class="aide">Touche tenue : le robot accélère peu à peu jusqu'à 0,70 m/s.</p>
     </section>
 
     <section class="bloc tete">

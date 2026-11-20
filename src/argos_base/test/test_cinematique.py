@@ -4,7 +4,7 @@ Lancer : python3 -m pytest src/argos_base/test/
 """
 import math
 
-from argos_base.cinematique import limiter, Odometrie, vitesses_roues
+from argos_base.cinematique import approcher, limiter, Odometrie, vitesses_roues
 import pytest
 
 ENTRAXE = 0.2
@@ -25,6 +25,24 @@ def test_limiter_garde_le_rapport():
     assert (g, d) == pytest.approx((0.15, 0.3))
     assert g / d == pytest.approx(0.5)                               # même courbe
     assert limiter(-0.6, 0.6, 0.3) == pytest.approx((-0.3, 0.3))
+
+
+def test_approcher_accelere_progressivement():
+    v = 0.0
+    for _ in range(10):                      # 10 pas de 0,05 s à 0,4 m/s²
+        v = approcher(v, 0.7, 0.4, 1.0, 0.05)
+    assert v == pytest.approx(0.2)           # 0,4 x 0,5 s
+    for _ in range(100):
+        v = approcher(v, 0.7, 0.4, 1.0, 0.05)
+    assert v == 0.7                          # atteint, sans dépasser
+
+
+def test_approcher_freine_plus_fort():
+    assert approcher(0.7, 0.0, 0.4, 1.0, 0.05) == pytest.approx(0.65)
+    assert approcher(-0.7, 0.0, 0.4, 1.0, 0.05) == pytest.approx(-0.65)
+    # Changement de sens : on freine jusqu'à zéro, puis on accélère dans l'autre sens
+    assert approcher(0.02, -0.5, 0.4, 1.0, 0.05) == pytest.approx(-0.03)
+    assert approcher(0.0, -0.5, 0.4, 1.0, 0.05) == pytest.approx(-0.02)
 
 
 def impulsions(metres):

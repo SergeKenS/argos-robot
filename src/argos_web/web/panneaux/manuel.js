@@ -1,6 +1,7 @@
 // panneaux/manuel.js : rôle Manuel (conduire le corps et la tête, à vue).
 // PC : croix de boutons et clavier (W A S D = corps, I J K L = tête, R = recentrer,
-//      C = aligner le corps sur la tête, Espace = STOP, Maj = vitesse maximale).
+//      C = aligner le corps sur la tête, Espace = STOP).
+// Touche tenue : le robot accélère peu à peu jusqu'au maximum (rampe de pont_moteurs).
 // Écran tactile : deux joysticks.
 // Les ordres ne partent que si le robot est en mode MANUEL et ce panneau visible.
 
@@ -19,8 +20,8 @@ const TOPIC_ANGLES = "/argos/tete/angles";     // geometry_msgs/Vector3 : x = °
 const PORT_VIDEO = 8081;                       // flux MJPEG (même serveur que essais/tourelle/flux_video.py)
 
 // ----- Vitesses ---------------------------------------------------------------
-const AVANCE = 0.20, AVANCE_MAX = 0.30;        // m/s (0,3 = plafond des roues dans base.yaml)
-const ROTATION = 0.8, ROTATION_MAX = 1.5;      // rad/s
+const AVANCE_MAX = 0.70;                       // m/s (vitesse_max de base.yaml, mesurée)
+const ROTATION_MAX = 2.0;                      // rad/s (environ 115 °/s)
 const TETE = 60;                               // °/s
 const PERIODE_ENVOI = 100;                     // ms : ordres répétés tant qu'on tient
 // Débattement de la tourelle autour de son centre (AMPLITUDE dans suivi_fluide.ino).
@@ -28,7 +29,7 @@ const LACET_MAX = 45, TANGAGE_MAX = 45;        // degrés
 
 let robot, croixCorps, croixTete, joyCorps, joyTete;
 let corps = { x: 0, y: 0 }, tete = { x: 0, y: 0 };
-let rapide = false, minuterie = null;
+let minuterie = null;
 let topicCorps = null, topicTete = null;
 let surveillanceVideo = null, relanceVideo = null;
 const $ = (id) => document.getElementById(id);
@@ -49,8 +50,12 @@ function initialiser(r) {
 
   $("btn-prendre").addEventListener("click", () => robot.envoyer(COMMANDE_ENTRER));
   $("btn-stop").addEventListener("click", stop);
-  $("btn-recentrer").addEventListener("click", () => robot.envoyer(COMMANDE_RECENTRER));
-  $("btn-aligner").addEventListener("click", () => robot.envoyer(COMMANDE_ALIGNER));
+  for (const id of ["btn-recentrer", "btn-recentrer-hud"]) {
+    $(id).addEventListener("click", () => robot.envoyer(COMMANDE_RECENTRER));
+  }
+  for (const id of ["btn-aligner", "btn-aligner-hud"]) {
+    $(id).addEventListener("click", () => robot.envoyer(COMMANDE_ALIGNER));
+  }
   $("btn-menu").addEventListener("click", () => document.body.classList.add("menu-ouvert"));
 
   robot.ecouter("connexion", () => {
@@ -68,7 +73,6 @@ function initialiser(r) {
   // ----- Clavier -----
   document.addEventListener("keydown", (e) => {
     if (!clavierPermis()) return;
-    if (e.code === "ShiftLeft" || e.code === "ShiftRight") { rapide = true; ordres(); return; }
     if (e.repeat) { if (croixCorps.touches[e.code] || croixTete.touches[e.code] || e.code === "Space") e.preventDefault(); return; }
     if (e.code === "Space") { e.preventDefault(); stop(); return; }
     if (e.code === "KeyR") { robot.envoyer(COMMANDE_RECENTRER); return; }
@@ -76,7 +80,6 @@ function initialiser(r) {
     if (croixCorps.touche(e.code, true) || croixTete.touche(e.code, true)) e.preventDefault();
   });
   document.addEventListener("keyup", (e) => {
-    if (e.code === "ShiftLeft" || e.code === "ShiftRight") { rapide = false; ordres(); return; }
     croixCorps.touche(e.code, false);
     croixTete.touche(e.code, false);
   });
@@ -99,7 +102,9 @@ function majVoile() {
   const enManuel = robot.connecte && robot.etat.mode === "MANUEL";
   $("voile-manuel").hidden = enManuel;
   $("btn-prendre").hidden = !robot.connecte;
-  for (const id of ["btn-recentrer", "btn-aligner"]) $(id).disabled = !enManuel;
+  for (const id of ["btn-recentrer", "btn-aligner", "btn-recentrer-hud", "btn-aligner-hud"]) {
+    $(id).disabled = !enManuel;
+  }
   for (const c of [croixCorps, croixTete, joyCorps, joyTete]) c.actif = enManuel;
   if (enManuel) return;
   const mode = robot.etat.mode;
@@ -127,14 +132,13 @@ function ordres() {
 
 function envoyer() {
   if (!commandesPermises() || !topicCorps) return;
-  // Joystick : direction proportionnelle jusqu'au maximum. Clavier : vitesse
-  // normale, maximale avec Maj.
-  const avance = corps.y * (rapide || corpsAuJoystick() ? AVANCE_MAX : AVANCE);
-  const rotation = -corps.x * (rapide || corpsAuJoystick() ? ROTATION_MAX : ROTATION);
+  // Joystick : proportionnel. Touche tenue : le maximum est demandé, et c'est la
+  // rampe du robot (pont_moteurs) qui fait monter la vitesse peu à peu.
+  const avance = corps.y * AVANCE_MAX;
+  const rotation = -corps.x * ROTATION_MAX;
   topicCorps.publish({ linear: { x: avance, y: 0, z: 0 }, angular: { x: 0, y: 0, z: rotation } });
   topicTete.publish({ x: -tete.x * TETE, y: tete.y * TETE, z: 0 });
 }
-function corpsAuJoystick() { return joyCorps.doigt !== null; }
 
 function stop() {
   croixCorps.toutRelacher();

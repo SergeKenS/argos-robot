@@ -26,6 +26,23 @@ def limiter(gauche, droite, vitesse_max):
     return gauche * facteur, droite * facteur
 
 
+def approcher(actuelle, voulue, acceleration, freinage, duree):
+    """Fait évoluer une vitesse vers la vitesse voulue, sans à-coup.
+
+    Pendant « duree » (s), la vitesse change d'au plus acceleration x duree quand
+    elle s'éloigne de zéro (le robot accélère), et d'au plus freinage x duree
+    quand elle s'en rapproche (le robot ralentit ou change de sens). Freiner
+    plus fort qu'on n'accélère : l'arrêt reste court.
+    """
+    if voulue * actuelle >= 0 and abs(voulue) > abs(actuelle):
+        pas = acceleration * duree
+    else:
+        pas = freinage * duree
+    if abs(voulue - actuelle) <= pas:
+        return voulue
+    return actuelle + math.copysign(pas, voulue - actuelle)
+
+
 class Odometrie:
     """Position estimée du robot à partir des compteurs des roues.
 

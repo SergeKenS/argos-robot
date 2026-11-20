@@ -5,8 +5,11 @@
           transformation odom → base_link (pour Nav2 et RViz)
 
 Sécurité (la carte garde la dernière vitesse reçue, sans limite de temps) :
-  - chien de garde : aucun cmd_vel depuis « delai_chien_de_garde » s → arrêt
-  - tout arrêt passe par l'arrêt rapide de la carte ($pwm:0, 0,2 à 0,4 s)
+  - chien de garde : aucun cmd_vel depuis « delai_chien_de_garde » s → le robot freine
+  - rampe : la vitesse monte d'au plus « acceleration » et descend d'au plus
+    « freinage » par seconde. Sans elle, un ordre brutal (joystick poussé d'un
+    coup) fait dépasser la consigne au régulateur de la carte (0,35 m/s pour 0,28)
+  - une fois à l'arrêt : arrêt rapide de la carte ($pwm:0), envoyé une fois
   - vitesse des roues limitée à « vitesse_max »
   - arrêt des moteurs quand le nœud s'arrête (Ctrl+C, ros2 launch arrêté)
 
@@ -24,7 +27,7 @@ from rclpy.node import Node
 from tf2_ros import TransformBroadcaster
 
 from argos_base.carte_yahboom import CarteYahboom, trouver_port
-from argos_base.cinematique import limiter, Odometrie, vitesses_roues
+from argos_base.cinematique import approcher, limiter, Odometrie, vitesses_roues
 
 
 class PontMoteurs(Node):
@@ -42,8 +45,13 @@ class PontMoteurs(Node):
         self.sens_gauche = p('sens_gauche', -1).value      # -1 : moteur monté en miroir
         self.sens_droite = p('sens_droite', 1).value
         self.vitesse_max = p('vitesse_max', 0.3).value     # m/s par roue
+        self.acceleration = p('acceleration', 0.4).value   # m/s²
+        self.freinage = p('freinage', 1.0).value            # m/s²
+        self.acceleration_rotation = p('acceleration_rotation', 3.0).value   # rad/s²
+        self.freinage_rotation = p('freinage_rotation', 6.0).value           # rad/s²
         self.delai_chien = p('delai_chien_de_garde', 0.5).value  # s
         frequence = p('frequence', 20.0).value             # Hz
+        self.periode = 1.0 / frequence
         self.publier_tf = p('publier_tf', True).value
         self.repere_odom = p('repere_odom', 'odom').value
         self.repere_robot = p('repere_robot', 'base_link').value
@@ -57,20 +65,21 @@ class PontMoteurs(Node):
 
         self.carte = CarteYahboom(port)
         self.odometrie = Odometrie(math.pi * diametre / impulsions_par_tour, self.entraxe)
-        self.consigne = (0.0, 0.0)       # vitesses voulues (gauche, droite), m/s
+        self.voulu = (0.0, 0.0)          # vitesse demandée (avance m/s, rotation rad/s)
+        self.applique = (0.0, 0.0)       # vitesse envoyée, qui rejoint « voulu » par la rampe
         self.heure_consigne = None       # heure du dernier cmd_vel reçu
         self.arrete = False              # arrêt rapide déjà envoyé
 
         self.pub_odom = self.create_publisher(Odometry, 'odom', 10)
         self.diffuseur_tf = TransformBroadcaster(self) if self.publier_tf else None
         self.create_subscription(Twist, 'cmd_vel', self.recevoir_cmd_vel, 10)
-        self.create_timer(1.0 / frequence, self.boucle)
+        self.create_timer(self.periode, self.boucle)
         self.get_logger().info(f'Carte moteurs sur {port}, entraxe {self.entraxe} m, '
-                               f'vitesse max {self.vitesse_max} m/s')
+                               f'vitesse max {self.vitesse_max} m/s, '
+                               f'accélération {self.acceleration} m/s²')
 
     def recevoir_cmd_vel(self, msg):
-        gauche, droite = vitesses_roues(msg.linear.x, msg.angular.z, self.entraxe)
-        self.consigne = limiter(gauche, droite, self.vitesse_max)
+        self.voulu = (msg.linear.x, msg.angular.z)
         self.heure_consigne = self.get_clock().now()
 
     def boucle(self):
@@ -78,13 +87,21 @@ class PontMoteurs(Node):
         maintenant = self.get_clock().now()
         perime = (self.heure_consigne is None or
                   (maintenant - self.heure_consigne).nanoseconds / 1e9 > self.delai_chien)
-        if perime or self.consigne == (0.0, 0.0):
+        voulu = (0.0, 0.0) if perime else self.voulu
+        # Rampe : la vitesse envoyée rejoint la vitesse voulue sans à-coup.
+        avance = approcher(self.applique[0], voulu[0],
+                           self.acceleration, self.freinage, self.periode)
+        rotation = approcher(self.applique[1], voulu[1],
+                             self.acceleration_rotation, self.freinage_rotation, self.periode)
+        self.applique = (avance, rotation)
+        if self.applique == (0.0, 0.0):
             # Arrêt rapide, envoyé une seule fois (puis rien : la carte reste arrêtée)
             if not self.arrete:
                 self.carte.arret_rapide()
                 self.arrete = True
         else:
-            gauche, droite = self.consigne
+            gauche, droite = limiter(*vitesses_roues(avance, rotation, self.entraxe),
+                                     self.vitesse_max)
             vitesses = [0, 0, 0, 0]
             vitesses[self.sortie_gauche - 1] = gauche * 1000 * self.sens_gauche
             vitesses[self.sortie_droite - 1] = droite * 1000 * self.sens_droite

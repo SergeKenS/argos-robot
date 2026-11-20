@@ -255,6 +255,10 @@ details.bloc[open] > summary::after { content: "−"; }
 .regle .curseur-zone { width: 100%; position: relative; height: 24px; }
 .regle .curseur { position: absolute; left: 50%; transform: translateX(-50%); display: flex; flex-direction: column; align-items: center; color: var(--tete); font-family: var(--mono); font-size: 13px; transition: left .1s linear; }
 
+/* Recentrer et Aligner sur l'image (écrans tactiles) */
+.actions-tete { top: 14px; right: 14px; gap: 8px; }
+.actions-tete button { background-color: rgba(10, 14, 18, .6); }
+
 /* Réticule au centre */
 .reticule { left: 50%; top: 50%; transform: translate(-50%, -50%); }
 
@@ -376,9 +380,9 @@ button.stop {
   .inclinaison .echelle { height: 150px; }
   .inclinaison .grand { font-size: 18px; }
   .regle { width: 70%; }
-  .regle { top: 46px; }
+  .regle { top: 60px; }
   .regle .titre-regle { display: none; }
-  .sans-lidar { top: 100px; right: 50%; transform: translateX(50%); font-size: 12px; white-space: nowrap; }
+  .sans-lidar { top: 110px; right: 50%; transform: translateX(50%); font-size: 12px; white-space: nowrap; }
   /* Pas assez de largeur pour STOP entre les deux joysticks : il passe au-dessus. */
   .zone-stop { bottom: 170px; }
   .joystick { width: 120px; height: 120px; }
