@@ -352,6 +352,12 @@ button.stop {
   .croix-zone { bottom: 14px; }
 }
 
+/* Fenêtre basse (portable, navigateur réduit) : la jauge et l'inclinaison
+   chevaucheraient les croix ; leurs valeurs restent dans la colonne de droite. */
+@media (max-height: 780px) {
+  .jauge, .inclinaison { display: none; }
+}
+
 /* ===== Téléphone debout ======================================================== */
 @media (max-width: 600px) {
   .logo { font-size: 22px; letter-spacing: 4px; }
