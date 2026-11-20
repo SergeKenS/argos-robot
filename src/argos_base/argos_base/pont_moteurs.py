@@ -4,12 +4,16 @@
   publie  odom (nav_msgs/Odometry)        ← position calculée avec les encodeurs
           transformation odom → base_link (pour Nav2 et RViz)
 
-Sécurité (la carte garde la dernière vitesse reçue, sans limite de temps) :
-  - chien de garde : aucun cmd_vel depuis « delai_chien_de_garde » s → le robot freine
-  - rampe : la vitesse monte d'au plus « acceleration » et descend d'au plus
-    « freinage » par seconde. Sans elle, un ordre brutal (joystick poussé d'un
-    coup) fait dépasser la consigne au régulateur de la carte (0,35 m/s pour 0,28)
-  - une fois à l'arrêt : arrêt rapide de la carte ($pwm:0), envoyé une fois
+Conduite, comme une voiture (la carte garde la dernière vitesse reçue, sans
+limite de temps : c'est ce nœud qui décide) :
+  - ordre reçu : la vitesse rejoint l'ordre par une rampe. Elle monte d'au plus
+    « acceleration » par seconde ; sans rampe, un ordre brutal fait dépasser la
+    consigne au régulateur de la carte (0,35 m/s pour 0,28).
+  - ordre de sens opposé, ou ordre 0 (STOP, Nav2 qui s'arrête) : le robot FREINE,
+    d'au plus « freinage » par seconde, puis repart dans l'autre sens si l'ordre dure.
+  - plus aucun ordre depuis « delai_chien_de_garde » s (touche lâchée, page fermée,
+    réseau perdu) : ROUE LIBRE. Moteurs sans courant ($pwm:0), seuls le poids et
+    les frottements arrêtent le robot.
   - vitesse des roues limitée à « vitesse_max »
   - arrêt des moteurs quand le nœud s'arrête (Ctrl+C, ros2 launch arrêté)
 
@@ -87,20 +91,24 @@ class PontMoteurs(Node):
         maintenant = self.get_clock().now()
         perime = (self.heure_consigne is None or
                   (maintenant - self.heure_consigne).nanoseconds / 1e9 > self.delai_chien)
-        voulu = (0.0, 0.0) if perime else self.voulu
-        # Rampe : la vitesse envoyée rejoint la vitesse voulue sans à-coup.
-        avance = approcher(self.applique[0], voulu[0],
-                           self.acceleration, self.freinage, self.periode)
-        rotation = approcher(self.applique[1], voulu[1],
-                             self.acceleration_rotation, self.freinage_rotation, self.periode)
-        self.applique = (avance, rotation)
-        if self.applique == (0.0, 0.0):
-            # Arrêt rapide, envoyé une seule fois (puis rien : la carte reste arrêtée)
+        if not perime:
+            # Rampe : la vitesse envoyée rejoint la vitesse voulue sans à-coup.
+            avance = approcher(self.applique[0], self.voulu[0],
+                               self.acceleration, self.freinage, self.periode)
+            rotation = approcher(self.applique[1], self.voulu[1],
+                                 self.acceleration_rotation, self.freinage_rotation, self.periode)
+            self.applique = (avance, rotation)
+        if perime or self.applique == (0.0, 0.0):
+            # Roue libre (ou arrêt atteint) : moteurs sans courant, envoyé une seule fois
             if not self.arrete:
                 self.carte.arret_rapide()
                 self.arrete = True
+            # En roue libre, la vitesse réelle est celle des encodeurs : un nouvel
+            # ordre repartira de là, sans à-coup.
+            if perime:
+                self.applique = (self.odometrie.lineaire, self.odometrie.angulaire)
         else:
-            gauche, droite = limiter(*vitesses_roues(avance, rotation, self.entraxe),
+            gauche, droite = limiter(*vitesses_roues(*self.applique, self.entraxe),
                                      self.vitesse_max)
             vitesses = [0, 0, 0, 0]
             vitesses[self.sortie_gauche - 1] = gauche * 1000 * self.sens_gauche

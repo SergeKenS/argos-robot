@@ -15,7 +15,7 @@ pont_moteurs:
     freinage: 1.0               # m/s² : de 0,7 m/s à l'arrêt en 0,7 s (environ 25 cm)
     acceleration_rotation: 3.0  # rad/s²
     freinage_rotation: 6.0      # rad/s²
-    delai_chien_de_garde: 0.5   # s sans cmd_vel avant l'arrêt
+    delai_chien_de_garde: 0.3   # s sans cmd_vel : roue libre (la page répète ses ordres toutes les 0,1 s)
     frequence: 20.0             # Hz : ordres aux moteurs et odométrie
     publier_tf: true            # odom -> base_link (désactiver si un autre nœud le fait)
     repere_odom: odom

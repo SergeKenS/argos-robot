@@ -24,12 +24,13 @@ const AVANCE_MAX = 0.70;                       // m/s (vitesse_max de base.yaml,
 const ROTATION_MAX = 2.0;                      // rad/s (environ 115 °/s)
 const TETE = 60;                               // °/s
 const PERIODE_ENVOI = 100;                     // ms : ordres répétés tant qu'on tient
+const DUREE_FREINAGE = 1500;                   // ms : STOP envoie « vitesse 0 » pendant ce temps
 // Débattement de la tourelle autour de son centre (AMPLITUDE dans suivi_fluide.ino).
 const LACET_MAX = 45, TANGAGE_MAX = 45;        // degrés
 
 let robot, croixCorps, croixTete, joyCorps, joyTete;
 let corps = { x: 0, y: 0 }, tete = { x: 0, y: 0 };
-let minuterie = null;
+let minuterie = null, freinageJusqua = 0;
 let topicCorps = null, topicTete = null;
 let surveillanceVideo = null, relanceVideo = null;
 const $ = (id) => document.getElementById(id);
@@ -122,12 +123,14 @@ function majVoile() {
 
 // ===== Envoi des ordres ==========================================================
 // Appelée à chaque changement : envoie tout de suite, puis répète tant qu'on tient.
-// Côté robot, un chien de garde arrête tout si les ordres cessent (page fermée, réseau perdu).
+// Corps, comme une voiture : touche lâchée = plus aucun ordre, le robot passe en
+// roue libre (pont_moteurs) ; STOP ou sens opposé = ordre explicite, le robot freine.
 function ordres() {
   envoyer();
-  const actif = corps.x || corps.y || tete.x || tete.y;
-  if (actif && !minuterie) minuterie = setInterval(envoyer, PERIODE_ENVOI);
-  if (!actif && minuterie) { clearInterval(minuterie); minuterie = null; }
+  if (enCours() && !minuterie) minuterie = setInterval(envoyer, PERIODE_ENVOI);
+}
+function enCours() {
+  return corps.x || corps.y || tete.x || tete.y || Date.now() < freinageJusqua;
 }
 
 function envoyer() {
@@ -136,8 +139,12 @@ function envoyer() {
   // rampe du robot (pont_moteurs) qui fait monter la vitesse peu à peu.
   const avance = corps.y * AVANCE_MAX;
   const rotation = -corps.x * ROTATION_MAX;
-  topicCorps.publish({ linear: { x: avance, y: 0, z: 0 }, angular: { x: 0, y: 0, z: rotation } });
+  // Un ordre pour le corps seulement si une direction est tenue, ou pendant un freinage.
+  if (avance || rotation || Date.now() < freinageJusqua) {
+    topicCorps.publish({ linear: { x: avance, y: 0, z: 0 }, angular: { x: 0, y: 0, z: rotation } });
+  }
   topicTete.publish({ x: -tete.x * TETE, y: tete.y * TETE, z: 0 });
+  if (!enCours() && minuterie) { clearInterval(minuterie); minuterie = null; }
 }
 
 function stop() {
@@ -147,7 +154,9 @@ function stop() {
   if (joyTete.doigt !== null) joyTete.relacher();
   corps = { x: 0, y: 0 };
   tete = { x: 0, y: 0 };
-  ordres();   // envoie les zéros une fois et arrête la répétition
+  // Freinage : « vitesse 0 » répété un moment, sinon le robot passerait en roue libre.
+  freinageJusqua = Date.now() + DUREE_FREINAGE;
+  ordres();
 }
 
 // ===== Instruments ===============================================================
