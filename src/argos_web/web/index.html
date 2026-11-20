@@ -29,6 +29,25 @@
 <!-- Onglets : remplis par app.js à partir de la liste des panneaux. -->
 <nav id="onglets" class="onglets" aria-label="Rôle du robot"></nav>
 
+<!-- Menu qui glisse depuis la gauche (plein écran sur téléphone couché).
+     Rempli par app.js : les mêmes rôles que les onglets. -->
+<div class="fond-tiroir" id="fond-tiroir"></div>
+<aside class="tiroir" id="tiroir" aria-label="Menu" aria-hidden="true">
+  <div class="tiroir-haut">
+    <span class="logo">ARGOS</span>
+    <button class="icone discret" id="btn-fermer-tiroir" type="button" aria-label="Fermer le menu">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><line x1="6" y1="6" x2="18" y2="18"/><line x1="18" y1="6" x2="6" y2="18"/></svg>
+    </button>
+  </div>
+  <div class="tiroir-etat">
+    <span class="etiquette" id="tiroir-etiquette">…</span>
+    <span class="liaison" id="tiroir-liaison">HORS LIGNE</span>
+  </div>
+  <h2>Mode</h2>
+  <nav class="tiroir-roles" id="tiroir-roles"></nav>
+  <button id="btn-veille-tiroir" class="contour-danger commande" type="button">Veille</button>
+</aside>
+
 <main>
 
 <!-- ===== Panneau SERVICE : appel, patrouille, points, réglages ============== -->

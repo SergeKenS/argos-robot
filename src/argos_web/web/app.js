@@ -89,7 +89,7 @@ function connecter() {
     robot.ros = ros;
     robot.connecte = true;
     document.body.classList.remove("deconnecte");
-    $("liaison").textContent = "LIAISON OK";
+    $("liaison").textContent = $("tiroir-liaison").textContent = "LIAISON OK";
     robot.journal("Connecté au robot.");
     abonner();
     robot.emettre("connexion");
@@ -100,7 +100,7 @@ function connecter() {
     robot.ros = null;
     topicCommande = null;
     document.body.classList.add("deconnecte");
-    $("liaison").textContent = "HORS LIGNE";
+    $("liaison").textContent = $("tiroir-liaison").textContent = "HORS LIGNE";
     if (etaitConnecte) {
       robot.journal("Liaison perdue, nouvel essai toutes les 3 s.", "avertissement");
       robot.emettre("deconnexion");
@@ -149,10 +149,15 @@ function recevoirEtat(texte) {
   etiquette.textContent = mode;
   etiquette.dataset.role = panneau ? panneau.role : "";
   if (mode === "ECHEC") etiquette.dataset.echec = ""; else delete etiquette.dataset.echec;
-  for (const bouton of $("onglets").children) {
+  for (const bouton of boutonsDeRole()) {
     if (panneau && bouton.dataset.role === panneau.role) bouton.dataset.actif = "";
     else delete bouton.dataset.actif;
   }
+  // Même étiquette dans le menu.
+  const copie = $("tiroir-etiquette");
+  copie.textContent = etiquette.textContent;
+  copie.dataset.role = etiquette.dataset.role;
+  if ("echec" in etiquette.dataset) copie.dataset.echec = ""; else delete copie.dataset.echec;
   // Le robot change de rôle : la page montre le panneau qui correspond.
   if (panneau && mode !== ancien.mode) montrer(panneau.role);
   robot.emettre("etat", robot.etat);
@@ -203,25 +208,41 @@ function panneauDuMode(mode) {
   return PANNEAUX.find((p) => p.modes.includes(mode)) || null;
 }
 
+// Les onglets (en haut) et le menu (à gauche) sont faits à partir de la même liste.
 function construireOnglets() {
-  const nav = $("onglets");
-  for (const p of PANNEAUX) {
-    const bouton = document.createElement("button");
-    bouton.type = "button";
-    bouton.textContent = p.titre;
-    bouton.dataset.role = p.role;
-    bouton.setAttribute("aria-pressed", "false");
-    bouton.addEventListener("click", () => montrer(p.role));
-    nav.append(bouton);
+  for (const nav of [$("onglets"), $("tiroir-roles")]) {
+    for (const p of PANNEAUX) {
+      const bouton = document.createElement("button");
+      bouton.type = "button";
+      bouton.textContent = p.titre;
+      bouton.dataset.role = p.role;
+      bouton.setAttribute("aria-pressed", "false");
+      bouton.addEventListener("click", () => { montrer(p.role); fermerMenu(); });
+      nav.append(bouton);
+    }
+    for (const b of BIENTOT) {
+      const bouton = document.createElement("button");
+      bouton.type = "button";
+      bouton.textContent = `${b.titre} · bientôt`;
+      bouton.dataset.bientot = "";
+      bouton.disabled = true;
+      nav.append(bouton);
+    }
   }
-  for (const b of BIENTOT) {
-    const bouton = document.createElement("button");
-    bouton.type = "button";
-    bouton.textContent = `${b.titre} · bientôt`;
-    bouton.dataset.bientot = "";
-    bouton.disabled = true;
-    nav.append(bouton);
-  }
+}
+
+function boutonsDeRole() {
+  return [...$("onglets").children, ...$("tiroir-roles").children];
+}
+
+// ===== Menu qui glisse depuis la gauche =========================================
+function ouvrirMenu() {
+  document.body.classList.add("tiroir-ouvert");
+  $("tiroir").setAttribute("aria-hidden", "false");
+}
+function fermerMenu() {
+  document.body.classList.remove("tiroir-ouvert");
+  $("tiroir").setAttribute("aria-hidden", "true");
 }
 
 function montrer(role) {
@@ -232,14 +253,13 @@ function montrer(role) {
   for (const section of document.querySelectorAll("[data-panneau]")) {
     section.hidden = section.dataset.panneau !== role;
   }
-  for (const bouton of $("onglets").children) {
+  for (const bouton of boutonsDeRole()) {
     bouton.setAttribute("aria-pressed", String(bouton.dataset.role === role));
   }
   // Le journal suit le panneau visible : il va en bas de sa colonne.
   const colonne = document.querySelector(`[data-panneau="${role}"] .colonne`);
   if (colonne) colonne.append($("bloc-journal"));
   document.body.classList.toggle("manuel-visible", role === "manuel");
-  document.body.classList.remove("menu-ouvert");
   try { localStorage.setItem("argos-panneau", role); } catch { /* stockage bloqué : sans importance */ }
   const nouveau = PANNEAUX.find((p) => p.role === role);
   if (nouveau && nouveau.montrer) nouveau.montrer();
@@ -286,6 +306,12 @@ function demarrer() {
   $("btn-journal").addEventListener("click", () => { journalComplet = !journalComplet; afficherJournal(); });
 
   $("btn-veille").addEventListener("click", () => robot.envoyer("veille"));
+  $("btn-veille-tiroir").addEventListener("click", () => { robot.envoyer("veille"); fermerMenu(); });
+  // Menu : ouvert par le bouton ☰ (panneau Manuel), fermé par la croix, à côté, ou Échap.
+  document.addEventListener("ouvrir-menu", ouvrirMenu);
+  $("btn-fermer-tiroir").addEventListener("click", fermerMenu);
+  $("fond-tiroir").addEventListener("click", fermerMenu);
+  document.addEventListener("keydown", (e) => { if (e.key === "Escape") fermerMenu(); });
 
   construireOnglets();
   for (const p of PANNEAUX) {

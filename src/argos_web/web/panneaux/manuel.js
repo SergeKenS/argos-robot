@@ -57,7 +57,7 @@ function initialiser(r) {
   for (const id of ["btn-aligner", "btn-aligner-hud"]) {
     $(id).addEventListener("click", () => robot.envoyer(COMMANDE_ALIGNER));
   }
-  $("btn-menu").addEventListener("click", () => document.body.classList.add("menu-ouvert"));
+  $("btn-menu").addEventListener("click", () => document.dispatchEvent(new Event("ouvrir-menu")));
 
   robot.ecouter("connexion", () => {
     topicCorps = robot.topic(TOPIC_CORPS, "geometry_msgs/msg/Twist");

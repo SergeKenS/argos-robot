@@ -344,12 +344,12 @@ button.stop {
 
 /* ===== Téléphone couché en mode Manuel : l'image prend tout l'écran ============ */
 @media (pointer: coarse) and (orientation: landscape) and (max-height: 540px) {
-  body.manuel-visible:not(.menu-ouvert) .entete,
-  body.manuel-visible:not(.menu-ouvert) .onglets,
-  body.manuel-visible:not(.menu-ouvert) [data-panneau=manuel] .colonne { display: none; }
-  body.manuel-visible:not(.menu-ouvert) main { padding: 0; }
-  body.manuel-visible:not(.menu-ouvert) .vue-camera { position: fixed; inset: 0; height: auto; min-height: 0; border: none; z-index: 10; }
-  body.manuel-visible:not(.menu-ouvert) .hud.menu { display: inline-flex; }
+  body.manuel-visible .entete,
+  body.manuel-visible .onglets,
+  body.manuel-visible [data-panneau=manuel] .colonne { display: none; }
+  body.manuel-visible main { padding: 0; }
+  body.manuel-visible .vue-camera { position: fixed; inset: 0; height: auto; min-height: 0; border: none; z-index: 10; }
+  body.manuel-visible .hud.menu { display: inline-flex; }
   .regle { top: 16px; }
   .regle .titre-regle { display: none; }
   .en-direct { top: 70px; }
@@ -389,6 +389,32 @@ button.stop {
   .croix-zone.droite { right: 12px; }
   button.stop { min-width: 120px; font-size: 20px; }
 }
+
+/* ===== Menu qui glisse depuis la gauche ======================================== */
+.fond-tiroir {
+  position: fixed; inset: 0; z-index: 20; background: rgba(0, 0, 0, .55);
+  opacity: 0; pointer-events: none; transition: opacity .2s;
+}
+.tiroir {
+  position: fixed; top: 0; bottom: 0; left: 0; z-index: 21;
+  width: min(300px, 82vw); padding: 16px; overflow-y: auto;
+  display: flex; flex-direction: column; gap: 14px;
+  background: var(--surface); border-right: 1px solid var(--bord);
+  transform: translateX(-100%); transition: transform .2s ease-out;
+}
+body.tiroir-ouvert .fond-tiroir { opacity: 1; pointer-events: auto; }
+body.tiroir-ouvert .tiroir { transform: none; }
+.tiroir-haut { display: flex; align-items: center; justify-content: space-between; }
+.tiroir-etat { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; }
+.tiroir-roles { display: flex; flex-direction: column; gap: 8px; }
+.tiroir-roles button { text-align: left; }
+.tiroir-roles button[aria-pressed=true] { border-color: var(--orange); background: var(--orange-fond); color: var(--orange-texte); }
+.tiroir-roles button[aria-pressed=true][data-role=service] { border-color: var(--service); background: var(--tete-fond); color: var(--tete-texte); }
+.tiroir-roles button[aria-pressed=true][data-role=cartographie] { border-color: var(--cartographie); background: var(--cartographie-fond); color: var(--cartographie); }
+.tiroir-roles button[data-bientot] { border-style: dashed; background: transparent; color: var(--eteint); clip-path: none; }
+.tiroir-roles button[data-actif]::after { content: ""; display: inline-block; width: 7px; height: 7px; margin-left: 10px; vertical-align: 2px; background: currentColor; }
+#tiroir-liaison { color: var(--danger-texte); }
+body:not(.deconnecte) #tiroir-liaison { color: var(--texte); }
 
 /* Sans connexion au robot, les commandes sont désactivées. */
 body.deconnecte .commande { opacity: .4; pointer-events: none; }
