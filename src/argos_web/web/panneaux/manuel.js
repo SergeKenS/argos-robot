@@ -23,8 +23,8 @@ const AVANCE = 0.20, AVANCE_MAX = 0.30;        // m/s (0,3 = plafond des roues d
 const ROTATION = 0.8, ROTATION_MAX = 1.5;      // rad/s
 const TETE = 60;                               // °/s
 const PERIODE_ENVOI = 100;                     // ms : ordres répétés tant qu'on tient
-// Débattements montrés par les instruments (mesurés sur la tourelle : environ).
-const LACET_MAX = 60, TANGAGE_MAX = 30;        // degrés
+// Débattement de la tourelle autour de son centre (AMPLITUDE dans suivi_fluide.ino).
+const LACET_MAX = 45, TANGAGE_MAX = 45;        // degrés
 
 let robot, croixCorps, croixTete, joyCorps, joyTete;
 let corps = { x: 0, y: 0 }, tete = { x: 0, y: 0 };
@@ -148,9 +148,9 @@ function stop() {
 
 // ===== Instruments ===============================================================
 function construireGraduations() {
-  // 13 traits de -60° à +60°, un grand tous les 30°.
+  // 19 traits de -45° à +45° (un tous les 5°), un grand tous les 15°.
   const traits = [];
-  for (let i = 0; i <= 12; i++) {
+  for (let i = 0; i <= 18; i++) {
     const trait = document.createElement("span");
     if (i % 3 === 0) trait.className = "grande";
     traits.push(trait);
