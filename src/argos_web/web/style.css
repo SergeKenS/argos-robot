@@ -345,17 +345,22 @@ button.stop {
   .regle .titre-regle { display: none; }
   .en-direct { top: 70px; }
   .sans-lidar { top: 64px; }
-  .jauge, .inclinaison { display: none; }
+  .jauge { display: none; }
+  .inclinaison { top: 100px; transform: none; }
+  .inclinaison .echelle { height: 110px; }
+  .inclinaison .grand { font-size: 18px; }
   .joystick { width: 124px; height: 124px; }
   .joystick .manette { left: 36px; top: 36px; }
   .zone-stop { bottom: 18px; }
   .croix-zone { bottom: 14px; }
 }
 
-/* Fenêtre basse (portable, navigateur réduit) : la jauge et l'inclinaison
-   chevaucheraient les croix ; leurs valeurs restent dans la colonne de droite. */
+/* Fenêtre basse (portable, navigateur réduit) : la jauge chevaucherait la croix ;
+   sa valeur reste dans la colonne de droite. La règle haut / bas raccourcit. */
 @media (max-height: 780px) {
-  .jauge, .inclinaison { display: none; }
+  .jauge { display: none; }
+  .inclinaison { top: 90px; transform: none; }
+  .inclinaison .echelle { height: 90px; }
 }
 
 /* ===== Téléphone debout ======================================================== */
@@ -366,7 +371,10 @@ button.stop {
   main { padding: 0 12px 16px; }
   .zone-carte { height: 52vh; min-height: 260px; }
   .vue-camera { height: 70vh; min-height: 420px; }
-  .jauge, .inclinaison { display: none; }
+  .jauge { display: none; }
+  .inclinaison { top: 140px; transform: none; right: 14px; }
+  .inclinaison .echelle { height: 150px; }
+  .inclinaison .grand { font-size: 18px; }
   .regle { width: 70%; }
   .regle { top: 46px; }
   .regle .titre-regle { display: none; }

@@ -175,10 +175,9 @@
         <div class="chiffres"><span class="nom">AVANCE</span><span class="grand" id="jauge-vitesse">--</span><span class="unite">m/s</span></div>
       </div>
 
-      <div class="hud inclinaison" role="img" aria-label="Inclinaison de la tête">
-        <div class="chiffres"><span class="nom">INCLINAISON</span><span class="grand" id="texte-inclinaison">--</span></div>
-        <div class="echelle">
-          <span class="grande"></span><span></span><span></span><span class="grande"></span><span></span><span></span><span class="grande"></span>
+      <div class="hud inclinaison" role="img" aria-label="Inclinaison de la tête par rapport au corps">
+        <div class="chiffres"><span class="nom">HAUT / BAS</span><span class="grand" id="texte-inclinaison">--</span></div>
+        <div class="echelle" id="graduations-verticales">
           <svg class="repere" id="repere-inclinaison" width="10" height="12" viewBox="0 0 10 12" aria-hidden="true"><polygon points="10 6 0 0 0 12" fill="#7FD4C8"/></svg>
         </div>
       </div>
@@ -259,7 +258,7 @@
       <div class="ligne"><span>Haut / bas</span><span class="valeur" id="tete-tangage">--</span></div>
       <div class="grille-2">
         <button id="btn-recentrer" class="principal commande" type="button" aria-label="Recentrer la tête (touche R)">Recentrer<span class="touche seulement-souris">[ R ]</span></button>
-        <button id="btn-aligner" class="orange commande" type="button" aria-label="Aligner le corps sur la tête (touche C)">Aligner le corps<span class="touche seulement-souris">[ C ]</span></button>
+        <button id="btn-aligner" class="orange commande" type="button" aria-label="Aligner le corps sur la tête (touche C)">Aligner<span class="touche seulement-souris">[ C ]</span></button>
       </div>
     </section>
   </aside>

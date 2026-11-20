@@ -148,14 +148,16 @@ function stop() {
 
 // ===== Instruments ===============================================================
 function construireGraduations() {
-  // 19 traits de -45° à +45° (un tous les 5°), un grand tous les 15°.
-  const traits = [];
-  for (let i = 0; i <= 18; i++) {
+  // Deux règles (gauche / droite et haut / bas) : 19 traits de -45° à +45°,
+  // un tous les 5°, un grand tous les 15°.
+  const traits = () => Array.from({ length: 19 }, (_, i) => {
     const trait = document.createElement("span");
     if (i % 3 === 0) trait.className = "grande";
-    traits.push(trait);
-  }
-  $("graduations").replaceChildren(...traits);
+    return trait;
+  });
+  $("graduations").replaceChildren(...traits());
+  // Règle verticale : les traits passent avant le repère, qui reste en dernier.
+  $("graduations-verticales").prepend(...traits());
 }
 
 // Angles de la tête par rapport au corps (degrés) : x = gauche (+), y = haut (+).
