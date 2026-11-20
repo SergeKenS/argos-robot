@@ -1,0 +1,10 @@
+Polices de l'application, copiées ici pour que la page marche sans Internet.
+Jeu de caractères « latin » seulement (lettres accentuées du français comprises).
+
+- Rajdhani 500, 600, 700 : Indian Type Foundry, licence SIL Open Font License 1.1
+  https://fonts.google.com/specimen/Rajdhani
+- Share Tech Mono 400 : Carrois Apostrophe, licence SIL Open Font License 1.1
+  https://fonts.google.com/specimen/Share+Tech+Mono
+
+Texte de la licence : https://openfontlicense.org
+Fichiers téléchargés depuis Google Fonts le 2026-11-20.

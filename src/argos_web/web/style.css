@@ -1,0 +1,377 @@
+/* Apparence de l'application ARGOS (téléphone, tablette, PC).
+   Style inspiré des interfaces de jeux vidéo : fond sombre, coins coupés,
+   titres en majuscules espacées, chiffres en police à chasse fixe.
+   Une couleur par rôle : vert d'eau = Service, violet = Cartographie,
+   orange = Manuel (et le corps du robot), vert d'eau clair = la tête. */
+
+/* ===== Polices (copies locales, voir polices/LISEZMOI.txt) ================== */
+@font-face { font-family: "Rajdhani"; font-weight: 500; font-display: swap; src: url("polices/rajdhani-500.woff2") format("woff2"); }
+@font-face { font-family: "Rajdhani"; font-weight: 600; font-display: swap; src: url("polices/rajdhani-600.woff2") format("woff2"); }
+@font-face { font-family: "Rajdhani"; font-weight: 700; font-display: swap; src: url("polices/rajdhani-700.woff2") format("woff2"); }
+@font-face { font-family: "Share Tech Mono"; font-weight: 400; font-display: swap; src: url("polices/share-tech-mono-400.woff2") format("woff2"); }
+
+/* ===== Couleurs et mesures communes ========================================== */
+:root {
+  --fond: #0A0E12;
+  --surface: #131A21;
+  --surface-2: #1A2129;
+  --surface-3: #232C36;
+  --bord: #2A333D;
+  --bord-doux: #1F2830;
+  --texte: #E6EAEE;
+  --texte-2: #C9D1D9;
+  --discret: #9AA5B1;
+  --eteint: #8A95A1;
+
+  /* Corps du robot et rôle Manuel */
+  --orange: #F5A524; --orange-texte: #F5B84A; --orange-fond: #2E220B; --orange-bord: #6B4E12;
+  /* Tête du robot */
+  --tete: #7FD4C8; --tete-texte: #8FE0D4; --tete-fond: #0F2421; --tete-bord: #2E6B63;
+  /* Rôles */
+  --service: #4FB8AA;
+  --cartographie: #B79CFF; --cartographie-fond: #221A3A;
+
+  --ok: #3FB950;
+  --direct: #E5484D;
+  --danger: #C62F35;
+  --danger-texte: #FF8A8F;
+  --avertissement: #F5B84A;
+
+  /* Carte du bâtiment */
+  --carte-inconnu: #0E151B;
+  --carte-libre: #1E2731;
+  --carte-occupe: #C9D1D9;
+  --carte-point: #7FD4C8;
+  --carte-selection: #F472B6;
+
+  --police: "Rajdhani", system-ui, "Segoe UI", sans-serif;
+  --mono: "Share Tech Mono", ui-monospace, "Consolas", monospace;
+
+  /* Coins coupés (haut gauche et bas droit) */
+  --coupe: polygon(8px 0, 100% 0, 100% calc(100% - 8px), calc(100% - 8px) 100%, 0 100%, 0 8px);
+  --coupe-large: polygon(12px 0, 100% 0, 100% calc(100% - 12px), calc(100% - 12px) 100%, 0 100%, 0 12px);
+
+  color-scheme: dark;
+}
+
+* { box-sizing: border-box; }
+
+html, body { margin: 0; background: var(--fond); }
+body {
+  color: var(--texte);
+  font: 500 16px/1.4 var(--police);
+  min-height: 100dvh;
+  -webkit-tap-highlight-color: transparent;
+}
+
+h2 {
+  margin: 0;
+  font-size: 15px; font-weight: 700; letter-spacing: 4px; text-transform: uppercase;
+  color: var(--texte-2);
+}
+.mono { font-family: var(--mono); font-weight: 400; }
+.discret { color: var(--discret); }
+.aide { font-size: 14px; color: var(--discret); margin: 0; }
+.erreur { color: var(--danger-texte); }
+[hidden] { display: none !important; }
+
+/* ===== Boutons ================================================================ */
+button, .bouton {
+  font: inherit; font-weight: 700; letter-spacing: 2px; text-transform: uppercase;
+  min-height: 44px; padding: 0 18px;
+  border: 1px solid var(--bord); background: var(--surface-2); color: var(--texte);
+  clip-path: var(--coupe);
+  cursor: pointer;
+  touch-action: manipulation;
+  user-select: none; -webkit-user-select: none;
+}
+button:hover:not(:disabled) { border-color: var(--texte-2); }
+button:focus-visible { outline: 2px solid var(--tete); outline-offset: -4px; }
+button:disabled { opacity: .4; cursor: not-allowed; }
+
+button.principal { background: var(--tete-fond); border-color: var(--tete-bord); color: var(--tete-texte); }
+button.orange { background: var(--orange-fond); border-color: var(--orange-bord); color: var(--orange-texte); }
+button.violet { background: var(--cartographie-fond); border-color: #4C3D80; color: var(--cartographie); }
+button.danger { background: var(--danger); border-color: var(--danger); color: #FFFFFF; }
+button.contour-danger { background: transparent; border-color: #7A2A2E; color: var(--danger-texte); }
+button.discret { background: transparent; }
+button.petit { min-height: 36px; padding: 0 12px; font-size: 14px; letter-spacing: 1px; }
+button.icone { min-width: 44px; padding: 0; display: inline-flex; align-items: center; justify-content: center; }
+button .touche { display: block; font-family: var(--mono); font-weight: 400; font-size: 12px; letter-spacing: 0; color: var(--texte-2); }
+
+.rangee { display: flex; flex-wrap: wrap; gap: 8px; }
+.rangee > button { flex: 1 1 auto; }
+.grille-2 { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+
+input[type=text], select {
+  font: inherit; font-weight: 600; min-height: 44px; padding: 0 12px; min-width: 0;
+  border: 1px solid var(--bord); background: var(--fond); color: var(--texte);
+}
+input[type=text]:focus, select:focus { outline: 2px solid var(--tete); outline-offset: -2px; }
+input[type=checkbox] { width: 20px; height: 20px; accent-color: var(--service); }
+input[type=range] { width: 100%; accent-color: var(--tete); }
+label { cursor: pointer; }
+
+/* ===== En-tête ================================================================= */
+.entete {
+  display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px;
+  padding: 12px 16px 8px;
+  max-width: 1440px; margin: 0 auto;
+}
+.marque { display: flex; align-items: center; gap: 14px; }
+.logo { font-weight: 700; font-size: 26px; letter-spacing: 6px; }
+.etiquette {
+  padding: 3px 14px; font-weight: 700; font-size: 14px; letter-spacing: 3px;
+  background: var(--surface-3); color: var(--texte-2);
+  clip-path: polygon(8px 0, 100% 0, calc(100% - 8px) 100%, 0 100%);
+}
+.etiquette[data-role=service] { background: var(--service); color: var(--fond); }
+.etiquette[data-role=cartographie] { background: var(--cartographie); color: var(--fond); }
+.etiquette[data-role=manuel] { background: var(--orange); color: var(--fond); }
+.etiquette[data-echec] { background: var(--danger); color: #FFFFFF; }
+.entete-droite { display: flex; align-items: center; gap: 14px; }
+.liaison { display: inline-flex; align-items: center; gap: 8px; font-family: var(--mono); font-size: 14px; color: var(--danger-texte); }
+.liaison::before { content: ""; width: 9px; height: 9px; background: var(--direct); }
+body:not(.deconnecte) .liaison { color: var(--texte); }
+body:not(.deconnecte) .liaison::before { background: var(--ok); }
+
+/* ===== Onglets des rôles ======================================================= */
+.onglets {
+  display: flex; gap: 8px; overflow-x: auto;
+  padding: 4px 16px 10px; max-width: 1440px; margin: 0 auto;
+  scrollbar-width: none;
+}
+.onglets button { flex: none; color: var(--texte-2); background: var(--surface); }
+.onglets button[aria-pressed=true][data-role=service] { border-color: var(--service); background: var(--tete-fond); color: var(--tete-texte); }
+.onglets button[aria-pressed=true][data-role=cartographie] { border-color: var(--cartographie); background: var(--cartographie-fond); color: var(--cartographie); }
+.onglets button[aria-pressed=true][data-role=manuel] { border-color: var(--orange); background: var(--orange-fond); color: var(--orange-texte); }
+.onglets button[data-bientot] { border-style: dashed; background: transparent; color: var(--eteint); clip-path: none; }
+/* Petit carré : le rôle dans lequel le robot se trouve en ce moment */
+.onglets button[data-actif]::after { content: ""; display: inline-block; width: 7px; height: 7px; margin-left: 10px; vertical-align: 2px; background: currentColor; }
+
+/* ===== Mise en page d'un panneau =============================================== */
+main { max-width: 1440px; margin: 0 auto; padding: 0 16px 24px; }
+.panneau { display: flex; flex-wrap: wrap; gap: 14px; align-items: flex-start; }
+.principal { flex: 999 1 560px; min-width: 0; display: flex; flex-direction: column; gap: 12px; }
+.colonne { flex: 1 1 300px; min-width: 0; display: flex; flex-direction: column; gap: 12px; }
+
+/* Bloc d'information : fond sombre et trait de couleur à gauche */
+.bloc { padding: 14px 16px; background: var(--surface); border-left: 3px solid var(--bord); display: flex; flex-direction: column; gap: 10px; }
+.bloc.service { border-left-color: var(--service); }
+.bloc.orange { border-left-color: var(--orange); }
+.bloc.orange h2 { color: var(--orange-texte); }
+.bloc.tete { border-left-color: var(--tete); }
+.bloc.tete h2 { color: var(--tete); }
+.bloc.violet { border-left-color: var(--cartographie); }
+.bloc.violet h2 { color: var(--cartographie); }
+.bloc.alerte { background: #2A2110; border-left-color: var(--orange); color: #F2D9A6; }
+.ligne { display: flex; justify-content: space-between; gap: 12px; color: var(--discret); }
+.ligne .valeur { font-family: var(--mono); color: var(--texte); }
+
+/* Blocs repliables (<details>) */
+details.bloc > summary {
+  cursor: pointer; list-style: none;
+  font-size: 15px; font-weight: 700; letter-spacing: 4px; text-transform: uppercase; color: var(--texte-2);
+  display: flex; justify-content: space-between; align-items: center; min-height: 28px;
+}
+details.bloc > summary::-webkit-details-marker { display: none; }
+details.bloc > summary::after { content: "+"; font-family: var(--mono); font-size: 20px; }
+details.bloc[open] > summary::after { content: "−"; }
+
+/* Mission en cours */
+.en-cours { background: var(--tete-fond); border-left-color: var(--service); flex-direction: row; align-items: center; justify-content: space-between; }
+.en-cours.echec { background: #2A1213; border-left-color: var(--danger); }
+.en-cours .surtitre { font-family: var(--mono); font-size: 13px; color: var(--tete-texte); }
+.en-cours.echec .surtitre { color: var(--danger-texte); }
+.en-cours .titre { font-weight: 700; font-size: 22px; letter-spacing: 1px; text-transform: uppercase; }
+
+/* ===== Cadre de visée (coins en équerre) ======================================= */
+.visee { position: relative; }
+.visee > .coin { position: absolute; width: 28px; height: 28px; border: 0 solid var(--tete); pointer-events: none; z-index: 2; }
+.visee > .coin.hg { top: 8px; left: 8px; border-top-width: 2px; border-left-width: 2px; }
+.visee > .coin.hd { top: 8px; right: 8px; border-top-width: 2px; border-right-width: 2px; }
+.visee > .coin.bg { bottom: 8px; left: 8px; border-bottom-width: 2px; border-left-width: 2px; }
+.visee > .coin.bd { bottom: 8px; right: 8px; border-bottom-width: 2px; border-right-width: 2px; }
+
+/* ===== Carte du bâtiment ======================================================= */
+.zone-carte {
+  height: min(68vh, 620px); min-height: 300px;
+  background: var(--carte-inconnu); border: 1px solid var(--bord-doux); overflow: hidden;
+}
+.zone-carte canvas { display: block; width: 100%; height: 100%; cursor: crosshair; }
+.zone-carte .titre-carte { position: absolute; top: 12px; left: 44px; font-family: var(--mono); font-size: 13px; color: var(--discret); z-index: 2; }
+.message-centre {
+  position: absolute; inset: 0; display: flex; align-items: center; justify-content: center;
+  padding: 24px; text-align: center; color: var(--eteint); letter-spacing: 3px; pointer-events: none;
+}
+.legende { display: flex; flex-wrap: wrap; gap: 14px; font-size: 14px; color: var(--discret); }
+.legende i { display: inline-block; width: 10px; height: 10px; margin-right: 6px; vertical-align: -1px; }
+
+/* ===== Listes ================================================================== */
+.points-appel { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 8px; }
+.points-appel button { min-height: 48px; letter-spacing: 1px; }
+.points-appel button[data-cible] { border-color: var(--service); background: var(--tete-fond); color: var(--tete-texte); }
+.liste-points { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 6px; }
+.liste-points li { display: flex; align-items: center; gap: 10px; padding: 6px 8px 6px 12px; background: var(--surface-2); }
+.liste-points .infos { flex: 1; min-width: 0; }
+.liste-points .nom { font-weight: 700; }
+.liste-points .coord { font-family: var(--mono); font-size: 12px; color: var(--discret); }
+.liste-points label { display: flex; align-items: center; gap: 6px; font-size: 14px; color: var(--discret); }
+
+/* ===== Journal ================================================================= */
+.journal { list-style: none; margin: 0; padding: 0; font-family: var(--mono); font-size: 13px; line-height: 1.6; color: var(--discret); }
+.journal.tout { max-height: 360px; overflow-y: auto; }
+.journal li { display: flex; gap: 10px; }
+.journal time { flex: none; color: var(--eteint); }
+.journal .avertissement { color: var(--avertissement); }
+.journal .erreur { color: var(--danger-texte); }
+
+/* ===== Mode Manuel : image de la caméra et instruments ========================= */
+.vue-camera {
+  position: relative; height: min(72vh, 660px); min-height: 360px;
+  background: #0E151B; border: 1px solid var(--bord-doux); overflow: hidden;
+  touch-action: none; user-select: none; -webkit-user-select: none;
+}
+.vue-camera > img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: contain; }
+.hud { position: absolute; z-index: 3; pointer-events: none; }
+.hud button, .actif-souris { pointer-events: auto; }
+.hud-texte { font-family: var(--mono); font-size: 14px; color: var(--texte-2); text-shadow: 0 0 4px #000; }
+.en-direct { top: 22px; left: 26px; display: flex; align-items: center; gap: 8px; }
+.en-direct::before { content: ""; width: 10px; height: 10px; border-radius: 50%; background: var(--direct); }
+.en-direct.coupe::before { background: var(--eteint); }
+.sans-lidar {
+  top: 20px; right: 26px; padding: 3px 12px; border: 1px solid var(--orange);
+  color: var(--orange-texte); background: rgba(46, 34, 11, .75);
+  font-weight: 700; font-size: 14px; letter-spacing: 2px;
+}
+
+/* Règle graduée : orientation de la tête par rapport au corps */
+.regle { top: 40px; left: 50%; transform: translateX(-50%); width: min(380px, 50%); display: flex; flex-direction: column; align-items: center; gap: 2px; }
+.regle .titre-regle { font-weight: 700; font-size: 12px; letter-spacing: 3px; color: var(--texte-2); text-shadow: 0 0 4px #000; }
+.regle .graduations { width: 100%; height: 22px; display: flex; justify-content: space-between; align-items: flex-end; border-bottom: 1px solid rgba(127, 212, 200, .6); font-family: var(--mono); font-size: 11px; color: var(--tete-texte); }
+.regle .graduations span { width: 1px; height: 5px; background: var(--tete); }
+.regle .graduations span.grande { height: 9px; }
+.regle .curseur-zone { width: 100%; position: relative; height: 24px; }
+.regle .curseur { position: absolute; left: 50%; transform: translateX(-50%); display: flex; flex-direction: column; align-items: center; color: var(--tete); font-family: var(--mono); font-size: 13px; transition: left .1s linear; }
+
+/* Réticule au centre */
+.reticule { left: 50%; top: 50%; transform: translate(-50%, -50%); }
+
+/* Jauge de vitesse (gauche) et inclinaison de la tête (droite) */
+.jauge { left: 26px; top: 50%; transform: translateY(-50%); display: flex; align-items: flex-end; gap: 10px; }
+.jauge .tube { width: 10px; height: 200px; border: 1px solid rgba(245, 165, 36, .6); position: relative; }
+.jauge .niveau { position: absolute; left: 0; right: 0; bottom: 0; height: 0; background: var(--orange); transition: height .1s linear; }
+.jauge .niveau.recul { background: var(--direct); }
+.jauge .chiffres, .inclinaison .chiffres { display: flex; flex-direction: column; gap: 2px; font-family: var(--mono); text-shadow: 0 0 4px #000; }
+.jauge .chiffres { color: var(--orange-texte); }
+.chiffres .nom { font-family: var(--police); font-weight: 700; font-size: 12px; letter-spacing: 2px; color: var(--texte-2); }
+.chiffres .grand { font-size: 22px; }
+.chiffres .unite { font-size: 12px; color: var(--texte-2); }
+.inclinaison { right: 26px; top: 50%; transform: translateY(-50%); display: flex; align-items: center; gap: 10px; }
+.inclinaison .chiffres { align-items: flex-end; color: var(--tete); }
+.inclinaison .echelle { height: 200px; position: relative; border-right: 1px solid rgba(127, 212, 200, .6); display: flex; flex-direction: column; justify-content: space-between; align-items: flex-end; }
+.inclinaison .echelle span { width: 8px; height: 1px; background: var(--tete); }
+.inclinaison .echelle span.grande { width: 14px; }
+.inclinaison .repere { position: absolute; right: 4px; top: 50%; transform: translateY(-50%); transition: top .1s linear; }
+
+/* Croix de commande (souris et clavier) */
+.croix-zone { bottom: 26px; display: flex; flex-direction: column; align-items: center; gap: 8px; }
+.croix-zone.gauche { left: 26px; }
+.croix-zone.droite { right: 26px; }
+.croix-zone .nom { font-weight: 700; font-size: 14px; letter-spacing: 4px; text-shadow: 0 0 4px #000; }
+.croix { display: grid; grid-template-columns: repeat(3, 58px); grid-template-rows: repeat(2, 58px); gap: 6px; }
+.croix button { min-height: 0; height: 58px; padding: 0; font-size: 20px; letter-spacing: 0; background: rgba(10, 14, 18, .55); touch-action: none; }
+.croix [data-sens=haut] { grid-column: 2; grid-row: 1; }
+.croix [data-sens=gauche] { grid-column: 1; grid-row: 2; }
+.croix [data-sens=bas] { grid-column: 2; grid-row: 2; }
+.croix [data-sens=droite] { grid-column: 3; grid-row: 2; }
+.croix.orange button { border-color: rgba(245, 165, 36, .7); color: var(--orange-texte); }
+.croix.orange button.enfonce { background: rgba(245, 165, 36, .9); color: var(--fond); }
+.croix.tete button { border-color: rgba(127, 212, 200, .7); color: var(--tete); }
+.croix.tete button.enfonce { background: rgba(127, 212, 200, .9); color: var(--fond); }
+.croix-zone.gauche .nom { color: var(--orange-texte); }
+.croix-zone.droite .nom { color: var(--tete); }
+
+/* Joysticks (écrans tactiles) */
+.joystick { width: 136px; height: 136px; border-radius: 50%; position: relative; background: rgba(10, 14, 18, .35); touch-action: none; }
+.joystick::before { content: ""; position: absolute; inset: 14px; border-radius: 50%; border: 1px dashed currentColor; opacity: .45; }
+.joystick .manette { position: absolute; width: 52px; height: 52px; left: 42px; top: 42px; border-radius: 50%; background: currentColor; }
+.joystick.orange { color: var(--orange); border: 2px solid rgba(245, 165, 36, .7); }
+.joystick.tete { color: var(--tete); border: 2px solid rgba(127, 212, 200, .7); }
+
+/* Sur un écran tactile, joysticks ; avec une souris, croix de boutons et clavier */
+.seulement-tactile { display: none !important; }
+@media (pointer: coarse) {
+  .seulement-tactile { display: flex !important; }
+  .seulement-souris { display: none !important; }
+}
+
+/* STOP */
+.zone-stop { left: 50%; bottom: 30px; transform: translateX(-50%); display: flex; flex-direction: column; align-items: center; gap: 6px; }
+.zone-stop .vitesse { font-family: var(--mono); font-size: 13px; color: var(--orange-texte); text-shadow: 0 0 4px #000; }
+button.stop {
+  min-width: 170px; min-height: 62px; border: none; background: var(--danger); color: #FFFFFF;
+  font-size: 26px; letter-spacing: 6px;
+  clip-path: polygon(14px 0, calc(100% - 14px) 0, 100% 50%, calc(100% - 14px) 100%, 14px 100%, 0 50%);
+}
+
+/* Voile quand le robot n'est pas en mode Manuel */
+.voile {
+  position: absolute; inset: 0; z-index: 5;
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 14px;
+  padding: 24px; text-align: center; background: rgba(10, 14, 18, .93);
+}
+.voile p { margin: 0; max-width: 420px; color: var(--texte-2); }
+.voile button { min-height: 56px; padding: 0 28px; font-size: 18px; }
+
+/* Vue de dessus : corps et tête */
+.vue-dessus { display: flex; align-items: center; gap: 14px; font-size: 14px; color: var(--discret); }
+.vue-dessus svg { flex: none; }
+.vue-dessus #fleche-tete { transition: transform .1s linear; transform-origin: 60px 60px; }
+
+/* Bouton MENU : seulement en plein écran sur téléphone couché */
+.hud.menu { top: 14px; left: 14px; display: none; z-index: 6; }   /* au-dessus du voile */
+
+/* ===== Téléphone couché en mode Manuel : l'image prend tout l'écran ============ */
+@media (pointer: coarse) and (orientation: landscape) and (max-height: 540px) {
+  body.manuel-visible:not(.menu-ouvert) .entete,
+  body.manuel-visible:not(.menu-ouvert) .onglets,
+  body.manuel-visible:not(.menu-ouvert) [data-panneau=manuel] .colonne { display: none; }
+  body.manuel-visible:not(.menu-ouvert) main { padding: 0; }
+  body.manuel-visible:not(.menu-ouvert) .vue-camera { position: fixed; inset: 0; height: auto; min-height: 0; border: none; z-index: 10; }
+  body.manuel-visible:not(.menu-ouvert) .hud.menu { display: inline-flex; }
+  .regle { top: 16px; }
+  .regle .titre-regle { display: none; }
+  .en-direct { top: 70px; }
+  .sans-lidar { top: 64px; }
+  .jauge, .inclinaison { display: none; }
+  .joystick { width: 124px; height: 124px; }
+  .joystick .manette { left: 36px; top: 36px; }
+  .zone-stop { bottom: 18px; }
+  .croix-zone { bottom: 14px; }
+}
+
+/* ===== Téléphone debout ======================================================== */
+@media (max-width: 600px) {
+  .logo { font-size: 22px; letter-spacing: 4px; }
+  .entete { padding: 10px 12px 6px; }
+  .onglets { padding: 4px 12px 8px; }
+  main { padding: 0 12px 16px; }
+  .zone-carte { height: 52vh; min-height: 260px; }
+  .vue-camera { height: 70vh; min-height: 420px; }
+  .jauge, .inclinaison { display: none; }
+  .regle { width: 70%; }
+  .regle { top: 46px; }
+  .regle .titre-regle { display: none; }
+  .sans-lidar { top: 100px; right: 50%; transform: translateX(50%); font-size: 12px; white-space: nowrap; }
+  /* Pas assez de largeur pour STOP entre les deux joysticks : il passe au-dessus. */
+  .zone-stop { bottom: 170px; }
+  .joystick { width: 120px; height: 120px; }
+  .joystick .manette { left: 34px; top: 34px; }
+  .croix-zone.gauche { left: 12px; }
+  .croix-zone.droite { right: 12px; }
+  button.stop { min-width: 120px; font-size: 20px; }
+}
+
+/* Sans connexion au robot, les commandes sont désactivées. */
+body.deconnecte .commande { opacity: .4; pointer-events: none; }

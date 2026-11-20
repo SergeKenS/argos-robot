@@ -2,922 +2,279 @@
 <html lang="fr">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>ARGOS · Pilotage</title>
-<style>
-  /* ---- Couleurs (thème clair, puis sombre selon le réglage du système) ---- */
-  :root {
-    --bg: #f4f5f7; --surface: #ffffff; --surface-2: #f0f2f5; --border: #e2e5ea;
-    --text: #1b1f24; --muted: #667085;
-    --accent: #2563eb; --accent-soft: #dbe7ff;
-    --ok: #15803d; --ok-soft: #dcfce7;
-    --warn: #b45309; --warn-soft: #fef3c7;
-    --danger: #dc2626; --danger-soft: #fee2e2;
-    --map-free: #ffffff; --map-occ: #1f2937; --map-unknown: #e5e7eb;
-    --robot: #ea580c; --point: #2563eb; --select: #db2777;
-  }
-  @media (prefers-color-scheme: dark) {
-    :root {
-      --bg: #0f1115; --surface: #171a21; --surface-2: #1e222b; --border: #2a2f3a;
-      --text: #e6e8ec; --muted: #9aa3b2;
-      --accent: #60a5fa; --accent-soft: #1e3a5f;
-      --ok: #4ade80; --ok-soft: #14361f;
-      --warn: #fbbf24; --warn-soft: #3d2e0a;
-      --danger: #f87171; --danger-soft: #3f1717;
-      --map-free: #222733; --map-occ: #e5e7eb; --map-unknown: #151821;
-      --robot: #fb923c; --point: #60a5fa; --select: #f472b6;
-    }
-  }
-
-  * { box-sizing: border-box; }
-  body {
-    margin: 0; background: var(--bg); color: var(--text);
-    font: 15px/1.45 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
-  }
-  header {
-    display: flex; align-items: center; justify-content: space-between; gap: 12px;
-    padding: 14px 20px; background: var(--surface); border-bottom: 1px solid var(--border);
-  }
-  .logo { font-weight: 800; letter-spacing: .12em; font-size: 18px; }
-  .logo small { font-weight: 500; letter-spacing: 0; color: var(--muted); margin-left: 8px; }
-  .badge {
-    display: inline-flex; align-items: center; gap: 8px; padding: 4px 12px;
-    border-radius: 999px; font-size: 13px; font-weight: 600;
-    background: var(--danger-soft); color: var(--danger);
-  }
-  .badge::before { content: ""; width: 8px; height: 8px; border-radius: 50%; background: currentColor; }
-  .badge.ok { background: var(--ok-soft); color: var(--ok); }
-
-  main {
-    display: grid; grid-template-columns: minmax(0, 1fr) 380px; gap: 16px;
-    padding: 16px 20px; max-width: 1400px; margin: 0 auto;
-  }
-  @media (max-width: 900px) { main { grid-template-columns: 1fr; padding: 12px 16px; } }
-  .colonne { display: flex; flex-direction: column; gap: 16px; min-width: 0; }
-
-  .carte {
-    background: var(--surface); border: 1px solid var(--border); border-radius: 14px;
-    padding: 16px;
-  }
-  .carte h2 {
-    margin: 0 0 12px; font-size: 13px; font-weight: 700; text-transform: uppercase;
-    letter-spacing: .06em; color: var(--muted);
-    display: flex; justify-content: space-between; align-items: baseline; gap: 8px;
-  }
-  .carte h2 span { text-transform: none; letter-spacing: 0; font-weight: 500; }
-
-  /* Carte du bâtiment */
-  #zone-carte {
-    position: relative; width: 100%; height: min(70vh, 640px); min-height: 300px;
-    background: var(--map-unknown); border-radius: 10px; overflow: hidden; cursor: crosshair;
-  }
-  #canvas-carte { width: 100%; height: 100%; display: block; }
-  #message-carte {
-    position: absolute; inset: 0; display: flex; align-items: center; justify-content: center;
-    color: var(--muted); pointer-events: none; text-align: center; padding: 20px;
-  }
-  .legende { display: flex; flex-wrap: wrap; gap: 14px; margin-top: 10px; font-size: 13px; color: var(--muted); }
-  .legende i { display: inline-block; width: 10px; height: 10px; border-radius: 50%; margin-right: 6px; vertical-align: -1px; }
-
-  /* État du robot */
-  .etat { display: flex; align-items: center; gap: 12px; margin-bottom: 14px; }
-  .pastille {
-    padding: 6px 14px; border-radius: 10px; font-weight: 800; letter-spacing: .05em;
-    background: var(--surface-2); color: var(--muted);
-  }
-  .pastille.APPEL { background: var(--accent-soft); color: var(--accent); }
-  .pastille.PATROUILLE { background: var(--ok-soft); color: var(--ok); }
-  .pastille.ECHEC { background: var(--danger-soft); color: var(--danger); }
-  .pastille.CARTOGRAPHIE { background: var(--warn-soft); color: var(--warn); }
-
-  /* Pendant la cartographie, on n'affiche que ce qui sert à la terminer. */
-  body.cartographie .hors-carto { display: none; }
-  body:not(.cartographie) .en-carto { display: none; }
-  #detail-etat { color: var(--muted); }
-
-  /* Boutons */
-  button {
-    font: inherit; font-weight: 600; border-radius: 10px; border: 1px solid var(--border);
-    background: var(--surface-2); color: var(--text); padding: 9px 14px; cursor: pointer;
-  }
-  button:hover:not(:disabled) { border-color: var(--accent); }
-  button:disabled { opacity: .45; cursor: not-allowed; }
-  button.principal { background: var(--accent); border-color: var(--accent); color: #fff; }
-  button.danger { background: var(--danger); border-color: var(--danger); color: #fff; }
-  button.petit { padding: 5px 10px; font-size: 13px; }
-  button.icone { padding: 5px 9px; color: var(--muted); }
-  .rangee { display: flex; gap: 8px; flex-wrap: wrap; }
-  .rangee > button { flex: 1; }
-
-  /* Liste des points */
-  .points { list-style: none; margin: 0 0 14px; padding: 0; display: flex; flex-direction: column; gap: 6px; }
-  .points li {
-    display: flex; align-items: center; gap: 8px; padding: 8px 10px;
-    background: var(--surface-2); border-radius: 10px;
-  }
-  .points .nom { font-weight: 600; }
-  .points .coord { font-size: 12px; color: var(--muted); font-variant-numeric: tabular-nums; }
-  .points .infos { flex: 1; min-width: 0; }
-  .points label { font-size: 12px; color: var(--muted); display: flex; align-items: center; gap: 4px; cursor: pointer; }
-  .vide { color: var(--muted); font-size: 14px; }
-
-  input[type=text] {
-    font: inherit; width: 100%; padding: 9px 12px; border-radius: 10px;
-    border: 1px solid var(--border); background: var(--surface-2); color: var(--text);
-  }
-  input[type=text]:focus { outline: 2px solid var(--accent-soft); border-color: var(--accent); }
-  select {
-    font: inherit; flex: 1; min-width: 0; padding: 9px 12px; border-radius: 10px;
-    border: 1px solid var(--border); background: var(--surface-2); color: var(--text);
-  }
-  .aide { font-size: 12px; color: var(--muted); margin: 6px 0 10px; }
-  .erreur { color: var(--danger); }
-
-  /* Pavé de pilotage */
-  .pave { display: grid; grid-template-columns: repeat(3, 64px); gap: 8px; justify-content: center; }
-  .pave button { height: 56px; font-size: 20px; touch-action: none; user-select: none; }
-  .pave button.actif { background: var(--accent); border-color: var(--accent); color: #fff; }
-
-  /* Réglages */
-  .reglage { display: flex; align-items: center; gap: 12px; }
-  input[type=range] { flex: 1; accent-color: var(--accent); }
-  .valeur { font-weight: 700; font-variant-numeric: tabular-nums; min-width: 64px; text-align: right; }
-
-  /* Journal */
-  #journal { list-style: none; margin: 0; padding: 0; max-height: 220px; overflow-y: auto; font-size: 13px; }
-  #journal li { padding: 4px 0; border-bottom: 1px solid var(--border); display: flex; gap: 10px; }
-  #journal time { color: var(--muted); font-variant-numeric: tabular-nums; }
-  #journal .erreur { color: var(--danger); }
-  #journal .avertissement { color: var(--warn); }
-
-  /* Sans connexion au robot, les commandes sont désactivées. */
-  body.deconnecte .commande { opacity: .45; pointer-events: none; }
-</style>
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#0A0E12">
+<title>ARGOS</title>
+<link rel="stylesheet" href="style.css">
+<!-- roslib.js 1.4.1 (RobotWebTools, licence BSD) : copie locale, la page marche sans Internet. -->
+<script src="roslib.min.js"></script>
+<!-- Le programme de la page : app.js, qui charge les panneaux (un par rôle). -->
+<script type="module" src="app.js"></script>
 </head>
 <body class="deconnecte">
 
-<header>
-  <div class="logo">ARGOS<small>Robot de service</small></div>
-  <div id="connexion" class="badge">Déconnecté</div>
+<!-- ===== En-tête : nom, rôle actif du robot, liaison, veille ================= -->
+<header class="entete">
+  <div class="marque">
+    <span class="logo">ARGOS</span>
+    <span id="etiquette-etat" class="etiquette">…</span>
+  </div>
+  <div class="entete-droite">
+    <span id="liaison" class="liaison">HORS LIGNE</span>
+    <button id="btn-veille" class="contour-danger commande" type="button"
+            title="Arrête la tâche en cours ; le robot passe au repos">Veille</button>
+  </div>
 </header>
 
+<!-- Onglets : remplis par app.js à partir de la liste des panneaux. -->
+<nav id="onglets" class="onglets" aria-label="Rôle du robot"></nav>
+
 <main>
-  <!-- Colonne gauche : la carte -->
-  <section class="carte">
-    <h2>Carte <span id="info-selection">Cliquez sur la carte pour choisir un emplacement</span></h2>
-    <div id="zone-carte">
-      <canvas id="canvas-carte"></canvas>
-      <div id="message-carte">En attente de la carte…</div>
+
+<!-- ===== Panneau SERVICE : appel, patrouille, points, réglages ============== -->
+<section class="panneau" data-panneau="service" hidden>
+  <div class="principal">
+    <div class="zone-carte visee">
+      <span class="coin hg"></span><span class="coin hd"></span><span class="coin bg"></span><span class="coin bd"></span>
+      <span class="titre-carte" id="service-titre-carte">CARTE</span>
+      <canvas id="service-canvas" aria-label="Carte du bâtiment"></canvas>
+      <div class="message-centre" id="service-message-carte">EN ATTENTE DE LA CARTE</div>
     </div>
+    <div class="aide" id="service-info-selection">Touchez la carte pour choisir un emplacement.</div>
     <div class="legende">
-      <span><i style="background:var(--robot)"></i>Robot</span>
-      <span><i style="background:var(--accent);border-radius:2px"></i>Base</span>
-      <span><i style="background:var(--point)"></i>Point</span>
-      <span><i style="background:var(--ok)"></i>Patrouille (ordre)</span>
-      <span><i style="background:var(--select)"></i>Emplacement choisi</span>
+      <span><i style="background:var(--orange);border-radius:50%"></i>Robot</span>
+      <span><i style="background:var(--service)"></i>Base</span>
+      <span><i style="background:var(--carte-point);border-radius:50%"></i>Point</span>
+      <span><i style="background:var(--ok);border-radius:50%"></i>Patrouille</span>
+      <span><i style="background:var(--carte-selection)"></i>Emplacement choisi</span>
     </div>
-    <div class="rangee commande hors-carto" style="margin-top:12px">
-      <button id="btn-placer" title="Équivalent de « 2D Pose Estimate » dans RViz">
-        Placer le robot sur la carte</button>
+    <div class="rangee commande">
+      <button id="btn-placer" type="button" title="Équivalent de « 2D Pose Estimate » dans RViz">Placer le robot</button>
+      <select id="choix-carte" aria-label="Carte à charger"></select>
+      <button id="btn-charger-carte" type="button">Charger la carte</button>
     </div>
-    <div class="rangee commande hors-carto" style="margin-top:8px">
-      <select id="choix-carte" aria-label="Carte"></select>
-      <button id="btn-carte">Charger cette carte</button>
-      <button id="btn-cartographier">Nouvelle carte</button>
-    </div>
-    <div class="commande en-carto" style="margin-top:12px">
-      <div class="aide" style="margin-top:0">Promenez le robot partout avec le pilotage
-        manuel : la carte se dessine en direct (mise à jour toutes les ~5 s).</div>
-      <div class="rangee">
-        <input id="nom-carte" type="text" placeholder="Nom de la carte (ex. maison_dupont)"
-               autocomplete="off" spellcheck="false" style="flex:2">
-        <button id="btn-enregistrer" class="principal" disabled>Enregistrer</button>
-        <button id="btn-abandonner">Abandonner</button>
-      </div>
-    </div>
-  </section>
-
-  <!-- Colonne droite : commandes -->
-  <div class="colonne">
-    <section class="carte commande">
-      <h2>Mode</h2>
-      <div class="etat">
-        <div id="pastille-etat" class="pastille">…</div>
-        <div id="detail-etat">En attente du répartiteur…</div>
-      </div>
-      <div class="rangee hors-carto">
-        <button id="btn-patrouille" class="principal">Lancer la patrouille</button>
-        <button id="btn-base" class="principal" title="Ajoutez un point nommé « base » pour l'activer">Retour à la base</button>
-      </div>
-      <div class="rangee hors-carto" style="margin-top:8px">
-        <button id="btn-veille" class="danger">Arrêt (veille)</button>
-      </div>
-    </section>
-
-    <section class="carte commande">
-      <h2>Pilotage manuel <span id="info-pilotage">Maintenir appuyé (ou flèches du clavier)</span></h2>
-      <div class="pave">
-        <span></span><button data-lin="1" data-ang="0" aria-label="Avancer">▲</button><span></span>
-        <button data-lin="0" data-ang="1" aria-label="Tourner à gauche">◀</button>
-        <button data-lin="0" data-ang="0" aria-label="Stop">■</button>
-        <button data-lin="0" data-ang="-1" aria-label="Tourner à droite">▶</button>
-        <span></span><button data-lin="-1" data-ang="0" aria-label="Reculer">▼</button><span></span>
-      </div>
-    </section>
-
-    <section class="carte commande hors-carto">
-      <h2>Points <span id="ordre-patrouille"></span></h2>
-      <ul id="liste-points" class="points"></ul>
-      <input id="nom-point" type="text" placeholder="Nom du nouveau point (ex. chambre_101)"
-             autocomplete="off" spellcheck="false">
-      <div id="aide-nom" class="aide">Minuscules, chiffres et « _ » uniquement.</div>
-      <div class="rangee">
-        <button id="btn-ajout-robot">À la position du robot</button>
-        <button id="btn-ajout-clic" disabled>À l'emplacement choisi</button>
-      </div>
-    </section>
-
-    <section class="carte commande">
-      <h2>Réglages</h2>
-      <div class="aide" style="margin-top:0">Marge de sécurité autour des obstacles
-        (<code>inflation_radius</code>). Minimum 0,22 m : le rayon du robot.</div>
-      <div class="reglage">
-        <input id="curseur-marge" type="range" min="0.22" max="0.70" step="0.01" value="0.25">
-        <span id="valeur-marge" class="valeur">0,25 m</span>
-      </div>
-      <div class="rangee" style="margin-top:12px">
-        <button id="btn-marge">Appliquer</button>
-      </div>
-      <div class="aide hors-carto" style="margin-top:16px">Le robot refuse toute destination ?
-        Par exemple s'il n'a pas été placé dans les 5 min après le démarrage :
-        placez-le, puis redémarrez la navigation.</div>
-      <div class="rangee hors-carto">
-        <button id="btn-redemarrer">Redémarrer la navigation</button>
-      </div>
-    </section>
-
-    <section class="carte">
-      <h2>Journal</h2>
-      <ul id="journal"></ul>
-    </section>
   </div>
+
+  <aside class="colonne">
+    <div class="bloc en-cours" id="bloc-en-cours" hidden>
+      <div>
+        <div class="surtitre" id="en-cours-surtitre">EN COURS</div>
+        <div class="titre" id="en-cours-titre"></div>
+      </div>
+      <button id="btn-annuler" class="discret petit commande" type="button">Annuler</button>
+    </div>
+
+    <section class="bloc commande">
+      <h2>Appeler le robot</h2>
+      <div class="points-appel" id="points-appel"></div>
+      <div class="grille-2">
+        <button id="btn-patrouille" type="button">Patrouille</button>
+        <button id="btn-base" type="button" title="Ajoutez un point nommé « base » pour l'activer">Retour base</button>
+      </div>
+    </section>
+
+    <details class="bloc commande">
+      <summary>Points <span class="mono discret" id="ordre-patrouille"></span></summary>
+      <ul class="liste-points" id="liste-points"></ul>
+      <input id="nom-point" type="text" placeholder="Nom du point (ex. chambre_101)"
+             autocomplete="off" spellcheck="false" aria-describedby="aide-nom">
+      <p class="aide" id="aide-nom">Minuscules, chiffres et « _ » seulement.</p>
+      <div class="grille-2">
+        <button id="btn-ajout-robot" type="button" class="petit">Ici (robot)</button>
+        <button id="btn-ajout-clic" type="button" class="petit" disabled>Emplacement choisi</button>
+      </div>
+    </details>
+
+    <details class="bloc commande">
+      <summary>Réglages</summary>
+      <p class="aide">Marge de sécurité autour des obstacles (inflation_radius).
+        Minimum 0,22 m : le rayon du robot.</p>
+      <div class="ligne"><input id="curseur-marge" type="range" min="0.22" max="0.70" step="0.01" value="0.25"
+             aria-label="Marge de sécurité"><span class="valeur" id="valeur-marge">0,25 m</span></div>
+      <button id="btn-marge" type="button" class="petit">Appliquer la marge</button>
+      <p class="aide">Le robot refuse toute destination ? Par exemple s'il n'a pas été placé
+        dans les 5 min après le démarrage : placez-le, puis redémarrez la navigation.</p>
+      <button id="btn-redemarrer" type="button" class="petit">Redémarrer la navigation</button>
+    </details>
+  </aside>
+</section>
+
+<!-- ===== Panneau CARTOGRAPHIE : dessiner une nouvelle carte ================= -->
+<section class="panneau" data-panneau="cartographie" hidden>
+  <div class="principal">
+    <div class="zone-carte visee">
+      <span class="coin hg"></span><span class="coin hd"></span><span class="coin bg"></span><span class="coin bd"></span>
+      <span class="titre-carte">CARTE EN COURS</span>
+      <canvas id="carto-canvas" aria-label="Carte en cours de création"></canvas>
+      <div class="message-centre" id="carto-message-carte">EN ATTENTE DE LA CARTE</div>
+    </div>
+  </div>
+
+  <aside class="colonne">
+    <section class="bloc violet commande" id="carto-avant">
+      <h2>Nouvelle carte</h2>
+      <p class="aide">Le robot s'arrête, puis vous le promenez partout : la carte se dessine
+        en direct. La base sera placée là où il se trouve au départ.</p>
+      <button id="btn-cartographier" type="button" class="violet">Commencer</button>
+    </section>
+
+    <section class="bloc violet commande" id="carto-pendant" hidden>
+      <h2>Promener le robot</h2>
+      <p class="aide">Maintenir appuyé, ou touches W A S D (flèches aussi).
+        Tourner lentement donne une carte plus nette.</p>
+      <div class="croix orange" id="carto-croix" style="margin: 0 auto">
+        <button type="button" data-sens="haut" aria-label="Avancer (touche W)">W</button>
+        <button type="button" data-sens="gauche" aria-label="Tourner à gauche (touche A)">A</button>
+        <button type="button" data-sens="bas" aria-label="Reculer (touche S)">S</button>
+        <button type="button" data-sens="droite" aria-label="Tourner à droite (touche D)">D</button>
+      </div>
+      <input id="nom-carte" type="text" placeholder="Nom de la carte (ex. etage_2)"
+             autocomplete="off" spellcheck="false" aria-label="Nom de la nouvelle carte">
+      <div class="grille-2">
+        <button id="btn-enregistrer" type="button" class="principal" disabled>Enregistrer</button>
+        <button id="btn-abandonner" type="button" class="contour-danger">Abandonner</button>
+      </div>
+    </section>
+  </aside>
+</section>
+
+<!-- ===== Panneau MANUEL : conduire le corps et la tête ===================== -->
+<section class="panneau" data-panneau="manuel" hidden>
+  <div class="principal">
+    <div class="vue-camera visee" id="vue-camera">
+      <span class="coin hg"></span><span class="coin hd"></span><span class="coin bg"></span><span class="coin bd"></span>
+      <img id="video" alt="Image de la caméra du robot" hidden>
+      <div class="message-centre" id="message-video">IMAGE DE LA CAMÉRA</div>
+
+      <button class="hud menu icone actif-souris" id="btn-menu" type="button" aria-label="Afficher le menu">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><line x1="4" y1="7" x2="20" y2="7"/><line x1="4" y1="12" x2="20" y2="12"/><line x1="4" y1="17" x2="20" y2="17"/></svg>
+      </button>
+      <div class="hud hud-texte en-direct coupe" id="en-direct">SANS IMAGE</div>
+      <div class="hud sans-lidar">SANS LIDAR · CONDUITE À VUE</div>
+
+      <div class="hud regle" role="img" aria-label="Orientation de la tête par rapport au corps" id="regle">
+        <span class="titre-regle">TÊTE PAR RAPPORT AU CORPS</span>
+        <div class="graduations" id="graduations"></div>
+        <div class="curseur-zone">
+          <div class="curseur" id="curseur-tete">
+            <svg width="12" height="8" viewBox="0 0 12 8" aria-hidden="true"><polygon points="6 0 12 8 0 8" fill="currentColor"/></svg>
+            <span id="texte-tete">--</span>
+          </div>
+        </div>
+      </div>
+
+      <svg class="hud reticule" width="110" height="110" viewBox="0 0 120 120" fill="none" stroke="#7FD4C8" stroke-width="2" aria-hidden="true">
+        <line x1="60" y1="20" x2="60" y2="46"/><line x1="60" y1="74" x2="60" y2="100"/>
+        <line x1="20" y1="60" x2="46" y2="60"/><line x1="74" y1="60" x2="100" y2="60"/>
+        <circle cx="60" cy="60" r="2" fill="#7FD4C8"/>
+        <path d="M30 40 V30 H40 M80 30 H90 V40 M90 80 V90 H80 M40 90 H30 V80" stroke-width="1.5"/>
+      </svg>
+
+      <div class="hud jauge" role="img" aria-label="Vitesse d'avance du robot">
+        <div class="tube"><div class="niveau" id="niveau-vitesse"></div></div>
+        <div class="chiffres"><span class="nom">AVANCE</span><span class="grand" id="jauge-vitesse">--</span><span class="unite">m/s</span></div>
+      </div>
+
+      <div class="hud inclinaison" role="img" aria-label="Inclinaison de la tête">
+        <div class="chiffres"><span class="nom">INCLINAISON</span><span class="grand" id="texte-inclinaison">--</span></div>
+        <div class="echelle">
+          <span class="grande"></span><span></span><span></span><span class="grande"></span><span></span><span></span><span class="grande"></span>
+          <svg class="repere" id="repere-inclinaison" width="10" height="12" viewBox="0 0 10 12" aria-hidden="true"><polygon points="10 6 0 0 0 12" fill="#7FD4C8"/></svg>
+        </div>
+      </div>
+
+      <!-- Souris et clavier : deux croix de boutons -->
+      <div class="hud croix-zone gauche seulement-souris">
+        <span class="nom">CORPS</span>
+        <div class="croix orange actif-souris" id="croix-corps">
+          <button type="button" data-sens="haut" aria-label="Avancer (touche W)">W</button>
+          <button type="button" data-sens="gauche" aria-label="Tourner à gauche (touche A)">A</button>
+          <button type="button" data-sens="bas" aria-label="Reculer (touche S)">S</button>
+          <button type="button" data-sens="droite" aria-label="Tourner à droite (touche D)">D</button>
+        </div>
+      </div>
+      <div class="hud croix-zone droite seulement-souris">
+        <span class="nom">TÊTE</span>
+        <div class="croix tete actif-souris" id="croix-tete">
+          <button type="button" data-sens="haut" aria-label="Regarder en haut (touche I)">I</button>
+          <button type="button" data-sens="gauche" aria-label="Regarder à gauche (touche J)">J</button>
+          <button type="button" data-sens="bas" aria-label="Regarder en bas (touche K)">K</button>
+          <button type="button" data-sens="droite" aria-label="Regarder à droite (touche L)">L</button>
+        </div>
+      </div>
+
+      <!-- Écran tactile : deux joysticks -->
+      <div class="hud croix-zone gauche seulement-tactile">
+        <div class="joystick orange actif-souris" id="joystick-corps" role="application" aria-label="Joystick du corps"><div class="manette"></div></div>
+        <span class="nom">CORPS</span>
+      </div>
+      <div class="hud croix-zone droite seulement-tactile">
+        <div class="joystick tete actif-souris" id="joystick-tete" role="application" aria-label="Joystick de la tête"><div class="manette"></div></div>
+        <span class="nom">TÊTE</span>
+      </div>
+
+      <div class="hud zone-stop">
+        <span class="vitesse" id="vitesse-stop">-- m/s · -- °/s</span>
+        <button class="stop actif-souris" id="btn-stop" type="button" aria-label="Arrêt immédiat (barre d'espace)">STOP</button>
+        <span class="hud-texte seulement-souris">[ ESPACE ]</span>
+      </div>
+
+      <div class="voile" id="voile-manuel">
+        <h2 id="voile-titre">Prendre les commandes</h2>
+        <p id="voile-texte">Le robot obéira à vos touches. La tâche en cours sera arrêtée.</p>
+        <button id="btn-prendre" class="orange commande" type="button">Prendre les commandes</button>
+      </div>
+    </div>
+  </div>
+
+  <aside class="colonne">
+    <section class="bloc orange">
+      <h2>Roues</h2>
+      <div class="ligne"><span>Avance</span><span class="valeur" id="roues-avance">--</span></div>
+      <div class="ligne"><span>Rotation</span><span class="valeur" id="roues-rotation">--</span></div>
+      <p class="aide seulement-souris">Maj enfoncée : vitesse maximale (0,3 m/s).</p>
+    </section>
+
+    <section class="bloc tete">
+      <h2>Tête</h2>
+      <div class="vue-dessus">
+        <svg width="96" height="96" viewBox="0 0 120 120" role="img" aria-label="Vue de dessus : avant du corps et regard de la tête">
+          <circle cx="60" cy="60" r="56" fill="none" stroke="#2A333D"/>
+          <rect x="38" y="40" width="44" height="52" rx="8" fill="#1F2830" stroke="#F5A524" stroke-width="2"/>
+          <rect x="30" y="56" width="7" height="20" rx="2" fill="#F5A524"/>
+          <rect x="83" y="56" width="7" height="20" rx="2" fill="#F5A524"/>
+          <line x1="60" y1="60" x2="60" y2="10" stroke="#F5A524" stroke-width="2" stroke-dasharray="4 4"/>
+          <g id="fleche-tete">
+            <line x1="60" y1="60" x2="60" y2="14" stroke="#7FD4C8" stroke-width="3"/>
+            <polygon points="60 6 66 18 54 18" fill="#7FD4C8"/>
+          </g>
+          <circle cx="60" cy="60" r="7" fill="#7FD4C8"/>
+        </svg>
+        <div>
+          <div><span style="color:var(--orange-texte)">Pointillé</span> : avant du corps</div>
+          <div><span style="color:var(--tete)">Flèche</span> : regard de la tête</div>
+        </div>
+      </div>
+      <div class="ligne"><span>Gauche / droite</span><span class="valeur" id="tete-lacet">--</span></div>
+      <div class="ligne"><span>Haut / bas</span><span class="valeur" id="tete-tangage">--</span></div>
+      <div class="grille-2">
+        <button id="btn-recentrer" class="principal commande" type="button" aria-label="Recentrer la tête (touche R)">Recentrer<span class="touche seulement-souris">[ R ]</span></button>
+        <button id="btn-aligner" class="orange commande" type="button" aria-label="Aligner le corps sur la tête (touche C)">Aligner le corps<span class="touche seulement-souris">[ C ]</span></button>
+      </div>
+    </section>
+  </aside>
+</section>
+
 </main>
 
-<!-- roslib.js 1.4.1 (RobotWebTools, licence BSD) : copie locale, la page marche sans Internet. -->
-<script src="roslib.min.js"></script>
-<script>
-"use strict";
+<!-- Journal : un seul pour toute la page, déplacé par app.js dans la colonne du panneau visible. -->
+<template id="modele-journal">
+  <section class="bloc" id="bloc-journal">
+    <h2>Journal</h2>
+    <ul class="journal" id="journal" aria-live="polite"></ul>
+    <button id="btn-journal" type="button" class="petit discret" hidden>Voir plus</button>
+  </section>
+</template>
 
-// ===== Configuration =========================================================
-// rosbridge tourne sur la même machine que le serveur de la page, port 9090.
-const URL_ROSBRIDGE = `ws://${location.hostname || "localhost"}:9090`;
-const RAYON_ROBOT = 0.22;            // mètres (robot_radius dans nav2_params.yaml)
-const FORMAT_NOM = /^[a-z0-9_]+$/;   // même règle que le répartiteur
-const NOEUDS_COSTMAP = ["/global_costmap/global_costmap", "/local_costmap/local_costmap"];
-
-// ===== État de la page =======================================================
-let ros = null;                 // connexion rosbridge
-let topicCommande = null;       // /argos/commande
-let carte = null;               // dernier message /map
-let imageCarte = null;          // la carte dessinée une fois, réutilisée à chaque image
-let points = {};                // { nom: {x, y, theta} }
-let patrouille = [];            // [ nom, ... ]
-let carteActuelle = null;       // nom de la carte chargée (ex. « arene »)
-let etat = { mode: null, cible: null };
-let selection = null;           // emplacement cliqué sur la carte {x, y}
-let robot = null;               // position du robot sur la carte {x, y, t}
-let carteVersOdom = null;       // pour lisser la position (voir recevoirOdom)
-let odomActuelle = null;
-let topicPositionInitiale = null;  // /initialpose (comme « 2D Pose Estimate » de RViz)
-let placement = null;           // placement du robot en cours : {depart, fin} en mètres
-let ignorerClic = false;        // le relâchement d'un placement ne doit pas sélectionner
-let topicVitesse = null;        // /cmd_vel_nav (pilotage manuel)
-
-const $ = (id) => document.getElementById(id);
-const canvas = $("canvas-carte");
-const ctx = canvas.getContext("2d");
-
-// ===== Connexion à rosbridge (reconnexion automatique) =======================
-function connecter() {
-  ros = new ROSLIB.Ros({ url: URL_ROSBRIDGE });
-
-  ros.on("connection", () => {
-    document.body.classList.remove("deconnecte");
-    $("connexion").textContent = "Connecté";
-    $("connexion").classList.add("ok");
-    journal("Connecté au robot.");
-    abonner();
-    lireMarge();
-  });
-  ros.on("close", () => {
-    arreterPilotage();
-    document.body.classList.add("deconnecte");
-    $("connexion").textContent = "Déconnecté";
-    $("connexion").classList.remove("ok");
-    setTimeout(connecter, 3000);   // nouvel essai dans 3 s
-  });
-  ros.on("error", () => {});       // « close » suit toujours une erreur
-}
-
-function abonner() {
-  topicCommande = new ROSLIB.Topic({
-    ros, name: "/argos/commande", messageType: "std_msgs/msg/String",
-  });
-
-  // Annoncé dès la connexion : le tout premier message publié juste après
-  // l'annonce risquerait d'être perdu, le temps que ROS relie les deux côtés.
-  topicPositionInitiale = new ROSLIB.Topic({
-    ros, name: "/initialpose", messageType: "geometry_msgs/msg/PoseWithCovarianceStamped",
-  });
-  topicPositionInitiale.advertise();
-
-  // Pilotage manuel : on publie là où Nav2 publie lui-même ses vitesses, pour
-  // passer par le lisseur de vitesse puis par collision_monitor (arrêt devant
-  // un obstacle). Chaîne : cmd_vel_nav → lisseur → collision_monitor → cmd_vel.
-  topicVitesse = new ROSLIB.Topic({
-    ros, name: "/cmd_vel_nav", messageType: "geometry_msgs/msg/Twist",
-  });
-  topicVitesse.advertise();
-
-  new ROSLIB.Topic({ ros, name: "/argos/etat", messageType: "std_msgs/msg/String" })
-    .subscribe((msg) => recevoirEtat(msg.data));
-
-  new ROSLIB.Topic({ ros, name: "/argos/points", messageType: "std_msgs/msg/String" })
-    .subscribe((msg) => recevoirPoints(JSON.parse(msg.data)));
-
-  // Messages du répartiteur (point enregistré, commande refusée, échec...).
-  new ROSLIB.Topic({ ros, name: "/argos/journal", messageType: "std_msgs/msg/String" })
-    .subscribe((msg) => {
-      const { niveau, texte } = JSON.parse(msg.data);
-      journal(`Robot : ${texte}`, niveau);
-    });
-
-  new ROSLIB.Topic({ ros, name: "/map", messageType: "nav_msgs/msg/OccupancyGrid" })
-    .subscribe(recevoirCarte);
-
-  new ROSLIB.Topic({
-    ros, name: "/amcl_pose", messageType: "geometry_msgs/msg/PoseWithCovarianceStamped",
-  }).subscribe(recevoirAmcl);
-
-  // Pendant la cartographie, c'est SLAM Toolbox qui publie la position (même format).
-  new ROSLIB.Topic({
-    ros, name: "/pose", messageType: "geometry_msgs/msg/PoseWithCovarianceStamped",
-  }).subscribe(recevoirAmcl);
-
-  // L'odométrie arrive très souvent : on la limite à 10 messages/s (throttle_rate en ms).
-  new ROSLIB.Topic({
-    ros, name: "/odom", messageType: "nav_msgs/msg/Odometry", throttle_rate: 100,
-  }).subscribe(recevoirOdom);
-}
-
-// Envoie une commande texte au répartiteur.
-function envoyer(texte) {
-  if (!topicCommande) return;
-  topicCommande.publish({ data: texte });
-  journal(`→ ${texte}`);
-}
-
-// ===== Réception des messages ================================================
-function recevoirEtat(texte) {
-  const [mode, c] = texte.split(" ");
-  const cible = c || null;
-  if (mode !== etat.mode || cible !== etat.cible) journal(`État : ${texte}`);
-  // Début de cartographie : la position connue appartient à l'ancienne carte.
-  if (mode === "CARTOGRAPHIE" && etat.mode !== "CARTOGRAPHIE") {
-    robot = null; carteVersOdom = null; selection = null;
-  }
-  etat = { mode, cible };
-  document.body.classList.toggle("cartographie", mode === "CARTOGRAPHIE");
-
-  const pastille = $("pastille-etat");
-  pastille.textContent = mode;
-  pastille.className = `pastille ${mode}`;
-  const details = {
-    VEILLE: "Au repos, en attente d'une commande.",
-    APPEL: `En route vers ${cible}.`,
-    PATROUILLE: `Patrouille, en route vers ${cible}.`,
-    ECHEC: `Échec vers ${cible}. Le robot attend une commande.`,
-    CARTOGRAPHIE: "Création d'une nouvelle carte.",
-  };
-  $("detail-etat").textContent = details[mode] || texte;
-  majPilotage();
-  dessiner();
-}
-
-function recevoirPoints(donnees) {
-  points = donnees.points || {};
-  patrouille = donnees.patrouille || [];
-
-  // Nouvelle carte chargée : l'ancienne position du robot n'a plus de sens.
-  if (carteActuelle && donnees.carte !== carteActuelle) {
-    robot = null; carteVersOdom = null; selection = null;
-    journal(`Carte « ${donnees.carte} » chargée.`);
-    majBoutonsAjout();
-  }
-  carteActuelle = donnees.carte;
-  const choix = $("choix-carte");
-  choix.replaceChildren(...(donnees.cartes || []).map((nom) => new Option(nom, nom)));
-  choix.value = carteActuelle;
-
-  afficherPoints();
-  dessiner();
-}
-
-$("btn-carte").addEventListener("click", () => {
-  const nom = $("choix-carte").value;
-  if (!nom || nom === carteActuelle) return;
-  if (confirm(`Charger la carte « ${nom} » ? Le robot s'arrête et devra être replacé.`)) {
-    envoyer(`carte ${nom}`);
-  }
-});
-
-function recevoirCarte(msg) {
-  carte = msg;
-  imageCarte = null;   // à redessiner avec la nouvelle carte
-  $("message-carte").style.display = "none";
-  dessiner();
-}
-
-// Angle de rotation autour de z (« lacet ») à partir d'un quaternion.
-function lacet(q) {
-  return Math.atan2(2 * (q.w * q.z + q.x * q.y), 1 - 2 * (q.y * q.y + q.z * q.z));
-}
-
-// Opérations sur les poses 2D {x, y, t} : composer = enchaîner deux déplacements.
-function composer(a, b) {
-  const c = Math.cos(a.t), s = Math.sin(a.t);
-  return { x: a.x + c * b.x - s * b.y, y: a.y + s * b.x + c * b.y, t: a.t + b.t };
-}
-function inverser(p) {
-  const c = Math.cos(p.t), s = Math.sin(p.t);
-  return { x: -(c * p.x + s * p.y), y: -(-s * p.x + c * p.y), t: -p.t };
-}
-
-// AMCL ne publie sa position qu'après un déplacement notable (~25 cm) : le robot
-// avancerait par sauts. On mémorise donc l'écart carte → odométrie à chaque
-// position AMCL, puis on suit l'odométrie (fluide) entre deux mises à jour.
-function recevoirAmcl(msg) {
-  const p = msg.pose.pose;
-  const poseCarte = { x: p.position.x, y: p.position.y, t: lacet(p.orientation) };
-  robot = poseCarte;
-  carteVersOdom = odomActuelle ? composer(poseCarte, inverser(odomActuelle)) : null;
-  majBoutonsAjout();
-  dessiner();
-}
-
-function recevoirOdom(msg) {
-  const p = msg.pose.pose;
-  odomActuelle = { x: p.position.x, y: p.position.y, t: lacet(p.orientation) };
-  if (carteVersOdom) {
-    robot = composer(carteVersOdom, odomActuelle);
-    dessiner();
-  }
-}
-
-// ===== Dessin de la carte ====================================================
-function couleur(nom) {
-  return getComputedStyle(document.documentElement).getPropertyValue(nom).trim();
-}
-function rgb(hex) {
-  const n = parseInt(hex.slice(1), 16);
-  return [(n >> 16) & 255, (n >> 8) & 255, n & 255];
-}
-
-// Construit l'image de la carte une seule fois (une cellule = un pixel).
-// Dans le message, la ligne 0 est en BAS de la carte : on inverse les lignes.
-function construireImage() {
-  const { width: l, height: h } = carte.info;
-  const image = document.createElement("canvas");
-  image.width = l; image.height = h;
-  const ic = image.getContext("2d");
-  const pixels = ic.createImageData(l, h);
-  const libre = rgb(couleur("--map-free")), occupe = rgb(couleur("--map-occ"));
-  const inconnu = rgb(couleur("--map-unknown"));
-  for (let ligne = 0; ligne < h; ligne++) {
-    for (let col = 0; col < l; col++) {
-      const v = carte.data[ligne * l + col];   // -1 inconnu, 0 libre … 100 occupé
-      const c = v < 0 ? inconnu : v >= 50 ? occupe : libre;
-      const i = ((h - 1 - ligne) * l + col) * 4;
-      pixels.data[i] = c[0]; pixels.data[i + 1] = c[1]; pixels.data[i + 2] = c[2];
-      pixels.data[i + 3] = 255;
-    }
-  }
-  ic.putImageData(pixels, 0, 0);
-  return image;
-}
-
-// Placement de la carte dans le canvas : centrée, à la plus grande taille possible.
-function vue() {
-  const { width: l, height: h, resolution: r, origin } = carte.info;
-  const echelle = Math.min(canvas.width / l, canvas.height / h);   // pixels par cellule
-  return {
-    echelle, r, ox: origin.position.x, oy: origin.position.y, h,
-    dx: (canvas.width - l * echelle) / 2, dy: (canvas.height - h * echelle) / 2,
-  };
-}
-// Mètres (repère carte) → pixels du canvas, et l'inverse.
-function versEcran(v, x, y) {
-  return [v.dx + ((x - v.ox) / v.r) * v.echelle, v.dy + (v.h - (y - v.oy) / v.r) * v.echelle];
-}
-function versCarte(v, px, py) {
-  return [v.ox + ((px - v.dx) / v.echelle) * v.r, v.oy + (v.h - (py - v.dy) / v.echelle) * v.r];
-}
-
-let dessinPrevu = false;
-function dessiner() {
-  // Regroupe les demandes de dessin : au plus une image par rafraîchissement d'écran.
-  if (dessinPrevu) return;
-  dessinPrevu = true;
-  requestAnimationFrame(() => { dessinPrevu = false; dessinerMaintenant(); });
-}
-
-function dessinerMaintenant() {
-  ctx.clearRect(0, 0, canvas.width, canvas.height);
-  if (!carte) return;
-  if (!imageCarte) imageCarte = construireImage();
-  const v = vue();
-  const dpr = window.devicePixelRatio || 1;
-
-  ctx.imageSmoothingEnabled = false;   // garder des cellules nettes
-  ctx.drawImage(imageCarte, v.dx, v.dy, carte.info.width * v.echelle, carte.info.height * v.echelle);
-
-  // Points nommés (vert + numéro s'ils font partie de la patrouille).
-  ctx.font = `${600} ${12 * dpr}px system-ui, sans-serif`;
-  // En cartographie, les points appartiennent à l'ancienne carte : on ne les montre pas.
-  const pointsVisibles = etat.mode === "CARTOGRAPHIE" ? {} : points;
-  for (const [nom, p] of Object.entries(pointsVisibles)) {
-    const [x, y] = versEcran(v, p.x, p.y);
-    const ordre = patrouille.indexOf(nom);
-    const cible = nom === etat.cible;
-    const taille = (cible ? 9 : 7) * dpr;
-    ctx.beginPath();
-    // La base est un carré, les autres points des disques.
-    if (nom === "base") ctx.rect(x - taille, y - taille, 2 * taille, 2 * taille);
-    else ctx.arc(x, y, taille, 0, 2 * Math.PI);
-    ctx.fillStyle = nom === "base" ? couleur("--accent")
-      : ordre >= 0 ? couleur("--ok") : couleur("--point");
-    ctx.fill();
-    if (cible) { ctx.lineWidth = 3 * dpr; ctx.strokeStyle = couleur("--warn"); ctx.stroke(); }
-    ctx.fillStyle = couleur("--text");
-    ctx.fillText(ordre >= 0 ? `${ordre + 1}. ${nom}` : nom, x + 11 * dpr, y + 4 * dpr);
-  }
-
-  // Emplacement choisi : une croix.
-  if (selection) {
-    const [x, y] = versEcran(v, selection.x, selection.y);
-    ctx.strokeStyle = couleur("--select"); ctx.lineWidth = 2.5 * dpr;
-    const t = 7 * dpr;
-    ctx.beginPath();
-    ctx.moveTo(x - t, y - t); ctx.lineTo(x + t, y + t);
-    ctx.moveTo(x + t, y - t); ctx.lineTo(x - t, y + t);
-    ctx.stroke();
-  }
-
-  // Robot : un disque à sa vraie taille, avec un trait dans le sens de la marche.
-  if (robot) {
-    const [x, y] = versEcran(v, robot.x, robot.y);
-    const rayon = Math.max((RAYON_ROBOT / v.r) * v.echelle, 6 * dpr);
-    ctx.beginPath();
-    ctx.arc(x, y, rayon, 0, 2 * Math.PI);
-    ctx.fillStyle = couleur("--robot"); ctx.globalAlpha = 0.85; ctx.fill(); ctx.globalAlpha = 1;
-    ctx.beginPath();
-    ctx.moveTo(x, y);
-    ctx.lineTo(x + Math.cos(robot.t) * rayon * 1.6, y - Math.sin(robot.t) * rayon * 1.6);
-    ctx.strokeStyle = couleur("--robot"); ctx.lineWidth = 3 * dpr; ctx.stroke();
-  }
-
-  // Placement en cours : flèche pointillée du point pressé vers le pointeur.
-  if (placement && placement.depart) {
-    const [x1, y1] = versEcran(v, placement.depart.x, placement.depart.y);
-    const fin = placement.fin || placement.depart;
-    const [x2, y2] = versEcran(v, fin.x, fin.y);
-    ctx.setLineDash([6 * dpr, 4 * dpr]);
-    ctx.beginPath(); ctx.moveTo(x1, y1); ctx.lineTo(x2, y2);
-    ctx.strokeStyle = couleur("--robot"); ctx.lineWidth = 3 * dpr; ctx.stroke();
-    ctx.setLineDash([]);
-    ctx.beginPath(); ctx.arc(x1, y1, 6 * dpr, 0, 2 * Math.PI);
-    ctx.fillStyle = couleur("--robot"); ctx.fill();
-  }
-}
-
-// Le canvas suit la taille de son cadre (et la densité de pixels de l'écran).
-new ResizeObserver(() => {
-  const dpr = window.devicePixelRatio || 1;
-  canvas.width = canvas.clientWidth * dpr;
-  canvas.height = canvas.clientHeight * dpr;
-  dessiner();
-}).observe(canvas);
-
-// Thème clair/sombre changé : les couleurs de la carte changent aussi.
-matchMedia("(prefers-color-scheme: dark)").addEventListener("change", () => {
-  imageCarte = null; dessiner();
-});
-
-// Position du pointeur sur la carte, en mètres (null si hors de la carte).
-function pointeurSurCarte(e) {
-  const dpr = window.devicePixelRatio || 1;
-  const rect = canvas.getBoundingClientRect();
-  const [x, y] = versCarte(vue(), (e.clientX - rect.left) * dpr, (e.clientY - rect.top) * dpr);
-  const i = carte.info, xmax = i.origin.position.x + i.width * i.resolution;
-  const ymax = i.origin.position.y + i.height * i.resolution;
-  if (x < i.origin.position.x || x > xmax || y < i.origin.position.y || y > ymax) return null;
-  return { x, y };
-}
-
-// Clic sur la carte : on retient l'emplacement (en mètres).
-canvas.addEventListener("click", (e) => {
-  if (ignorerClic) { ignorerClic = false; return; }
-  if (!carte || placement) return;
-  const p = pointeurSurCarte(e);
-  if (!p) return;
-  selection = { x: Math.round(p.x * 100) / 100, y: Math.round(p.y * 100) / 100 };
-  $("info-selection").textContent = `Emplacement choisi : x ${selection.x} · y ${selection.y}`;
-  majBoutonsAjout();
-  dessiner();
-});
-
-// ===== Placer le robot (équivalent de « 2D Pose Estimate » de RViz) ==========
-// On appuie là où est le robot, on glisse vers là où il regarde, on relâche.
-$("btn-placer").addEventListener("click", () => {
-  placement = placement ? null : { depart: null, fin: null };
-  $("btn-placer").textContent = placement ? "Annuler le placement" : "Placer le robot sur la carte";
-  $("info-selection").textContent = placement
-    ? "Appuyez sur la position du robot, glissez vers où il regarde, relâchez."
-    : "Cliquez sur la carte pour choisir un emplacement";
-  canvas.style.touchAction = placement ? "none" : "";   // pas de défilement pendant le geste
-  dessiner();
-});
-
-canvas.addEventListener("pointerdown", (e) => {
-  if (!placement || !carte) return;
-  const p = pointeurSurCarte(e);
-  if (!p) return;
-  placement.depart = p;
-  canvas.setPointerCapture(e.pointerId);   // suivre le geste même hors du canvas
-  dessiner();
-});
-
-canvas.addEventListener("pointermove", (e) => {
-  if (!placement || !placement.depart) return;
-  placement.fin = pointeurSurCarte(e) || placement.fin;
-  dessiner();
-});
-
-canvas.addEventListener("pointerup", () => {
-  if (!placement || !placement.depart) return;
-  const { depart, fin } = placement;
-  // Orientation = direction du glissé. Glissé trop court : on garde l'orientation actuelle.
-  const glisse = fin && Math.hypot(fin.x - depart.x, fin.y - depart.y) > 0.1;
-  const t = glisse ? Math.atan2(fin.y - depart.y, fin.x - depart.x) : (robot ? robot.t : 0);
-  publierPositionInitiale(depart.x, depart.y, t);
-  ignorerClic = true;   // le « click » qui suit ne doit pas devenir une sélection
-  $("btn-placer").click();   // quitte le mode placement
-});
-
-function publierPositionInitiale(x, y, t) {
-  const covariance = new Array(36).fill(0);
-  // Incertitude de départ, mêmes valeurs que RViz : 0,25 m² en x et y, ~0,07 rad² en angle.
-  covariance[0] = 0.25; covariance[7] = 0.25; covariance[35] = 0.06853891945200942;
-  topicPositionInitiale.publish({
-    // AMCL n'accepte une position que dans le repère de la carte (« map »).
-    header: { frame_id: "map", stamp: { sec: 0, nanosec: 0 } },
-    pose: {
-      pose: {
-        position: { x, y, z: 0 },
-        orientation: { x: 0, y: 0, z: Math.sin(t / 2), w: Math.cos(t / 2) },
-      },
-      covariance,
-    },
-  });
-  journal(`Robot placé : x ${x.toFixed(2)} · y ${y.toFixed(2)} · θ ${t.toFixed(2)}`);
-}
-
-// ===== Liste des points ======================================================
-function afficherPoints() {
-  const liste = $("liste-points");
-  liste.replaceChildren();
-  const noms = Object.keys(points);
-  if (noms.length === 0) {
-    liste.innerHTML = '<li class="vide">Aucun point. Ajoutez-en un ci-dessous.</li>';
-  }
-  for (const nom of noms) {
-    const p = points[nom];
-    const li = document.createElement("li");
-
-    const infos = document.createElement("div");
-    infos.className = "infos";
-    const titre = document.createElement("div");
-    titre.className = "nom"; titre.textContent = nom;
-    const coord = document.createElement("div");
-    coord.className = "coord";
-    coord.textContent = `x ${p.x} · y ${p.y} · θ ${p.theta}`;
-    infos.append(titre, coord);
-
-    // Case « patrouille » : ajoute le point à la fin de la boucle, ou l'en retire.
-    const label = document.createElement("label");
-    const caseP = document.createElement("input");
-    caseP.type = "checkbox"; caseP.checked = patrouille.includes(nom);
-    caseP.addEventListener("change", () => {
-      const nouvelle = caseP.checked ? [...patrouille, nom] : patrouille.filter((n) => n !== nom);
-      envoyer(`definir_patrouille ${nouvelle.join(" ")}`.trim());
-    });
-    label.append(caseP, "Patrouille");
-
-    const appeler = document.createElement("button");
-    appeler.className = "petit principal"; appeler.textContent = "Appeler";
-    appeler.addEventListener("click", () => envoyer(`appel ${nom}`));
-
-    const supprimer = document.createElement("button");
-    supprimer.className = "icone"; supprimer.textContent = "✕"; supprimer.title = "Supprimer";
-    supprimer.addEventListener("click", () => {
-      if (confirm(`Supprimer le point « ${nom} » ?`)) envoyer(`supprimer ${nom}`);
-    });
-
-    li.append(infos, label, appeler, supprimer);
-    liste.append(li);
-  }
-  $("ordre-patrouille").textContent = patrouille.length ? patrouille.join(" → ") : "";
-  $("btn-patrouille").disabled = patrouille.length === 0;
-  $("btn-base").disabled = !("base" in points);
-}
-
-// Nom du nouveau point : validé ici avant envoi (le répartiteur revérifie).
-function nomValide() {
-  const nom = $("nom-point").value.trim();
-  const ok = FORMAT_NOM.test(nom);
-  $("aide-nom").classList.toggle("erreur", nom !== "" && !ok);
-  return ok ? nom : null;
-}
-function majBoutonsAjout() {
-  const nom = nomValide();
-  $("btn-ajout-robot").disabled = !nom || !robot;
-  $("btn-ajout-clic").disabled = !nom || !selection;
-}
-$("nom-point").addEventListener("input", (e) => {
-  e.target.value = e.target.value.toLowerCase().replace(/[\s-]/g, "_");
-  majBoutonsAjout();
-});
-$("btn-ajout-robot").addEventListener("click", () => {
-  envoyer(`ajouter ${nomValide()}`);
-  $("nom-point").value = ""; majBoutonsAjout();
-});
-$("btn-ajout-clic").addEventListener("click", () => {
-  envoyer(`ajouter ${nomValide()} ${selection.x} ${selection.y}`);
-  $("nom-point").value = ""; majBoutonsAjout();
-});
-
-// ===== Pilotage manuel =======================================================
-// Vitesse linéaire = maximum du lisseur de vitesse de Nav2 (nav2_params.yaml),
-// pour cartographier vite une grande surface. Rotation modérée : SLAM dessine
-// une carte plus nette quand le robot tourne lentement.
-const VITESSE_LINEAIRE = 0.5;   // m/s
-const VITESSE_ROTATION = 0.8;   // rad/s
-let mouvement = null;           // {lin, ang} pendant qu'un bouton est maintenu
-let minuterieMouvement = null;
-
-function publierVitesse(lin, ang) {
-  if (!topicVitesse) return;
-  topicVitesse.publish({ linear: { x: lin, y: 0, z: 0 }, angular: { x: 0, y: 0, z: ang } });
-}
-
-// Tant que le bouton est maintenu, on répète la commande 10 fois par seconde.
-// Si la page se fige ou perd le réseau, les envois cessent et le lisseur de
-// vitesse de Nav2 arrête le robot de lui-même au bout de 1 s (velocity_timeout).
-function piloter(sensLin, sensAng) {
-  arreterPilotage();
-  if (sensLin === 0 && sensAng === 0) return;   // bouton ■
-  mouvement = { lin: sensLin * VITESSE_LINEAIRE, ang: sensAng * VITESSE_ROTATION };
-  publierVitesse(mouvement.lin, mouvement.ang);
-  minuterieMouvement = setInterval(() => publierVitesse(mouvement.lin, mouvement.ang), 100);
-}
-
-function arreterPilotage() {
-  if (minuterieMouvement) clearInterval(minuterieMouvement);
-  minuterieMouvement = null;
-  if (mouvement) publierVitesse(0, 0);
-  mouvement = null;
-  document.querySelectorAll(".pave button").forEach((b) => b.classList.remove("actif"));
-}
-
-// Le pilotage manuel n'est permis qu'au repos, pour ne pas contredire Nav2.
-function pilotageAutorise() {
-  return ["VEILLE", "ECHEC", "CARTOGRAPHIE"].includes(etat.mode);
-}
-function majPilotage() {
-  const ok = pilotageAutorise();
-  document.querySelectorAll(".pave button").forEach((b) => { b.disabled = !ok; });
-  $("info-pilotage").textContent = ok
-    ? "Maintenir appuyé (ou flèches du clavier)"
-    : "Disponible quand le robot est en veille";
-  if (!ok) arreterPilotage();
-}
-
-document.querySelectorAll(".pave button").forEach((bouton) => {
-  bouton.addEventListener("pointerdown", (e) => {
-    bouton.setPointerCapture(e.pointerId);
-    bouton.classList.add("actif");
-    piloter(Number(bouton.dataset.lin), Number(bouton.dataset.ang));
-  });
-  for (const fin of ["pointerup", "pointercancel", "lostpointercapture"]) {
-    bouton.addEventListener(fin, arreterPilotage);
-  }
-});
-
-// Flèches du clavier (sauf pendant la saisie d'un nom de point).
-const TOUCHES = { ArrowUp: [1, 0], ArrowDown: [-1, 0], ArrowLeft: [0, 1], ArrowRight: [0, -1] };
-document.addEventListener("keydown", (e) => {
-  const sens = TOUCHES[e.key];
-  if (!sens || e.repeat || ["INPUT", "SELECT"].includes(document.activeElement.tagName)) return;
-  if (!pilotageAutorise() || document.body.classList.contains("deconnecte")) return;
-  e.preventDefault();
-  piloter(sens[0], sens[1]);
-});
-document.addEventListener("keyup", (e) => { if (TOUCHES[e.key]) arreterPilotage(); });
-window.addEventListener("blur", arreterPilotage);   // fenêtre quittée : on arrête
-
-// ===== Créer une nouvelle carte ==============================================
-$("btn-cartographier").addEventListener("click", () => {
-  if (confirm("Commencer une nouvelle carte ? Le robot s'arrête ; promenez-le ensuite "
-      + "avec le pilotage manuel. La base sera placée là où il se trouve maintenant.")) {
-    envoyer("cartographier");
-  }
-});
-$("nom-carte").addEventListener("input", (e) => {
-  e.target.value = e.target.value.toLowerCase().replace(/[\s-]/g, "_");
-  const nom = e.target.value;
-  // Même règle que les points ; un nom déjà pris écraserait une carte existante.
-  const pris = [...$("choix-carte").options].some((option) => option.value === nom);
-  $("btn-enregistrer").disabled = !FORMAT_NOM.test(nom) || pris;
-});
-$("btn-enregistrer").addEventListener("click", () => {
-  envoyer(`enregistrer ${$("nom-carte").value}`);
-  $("nom-carte").value = "";
-  $("btn-enregistrer").disabled = true;
-});
-$("btn-abandonner").addEventListener("click", () => {
-  if (confirm("Abandonner la nouvelle carte ? Elle sera perdue.")) envoyer("abandonner");
-});
-
-// ===== Boutons de mode =======================================================
-$("btn-patrouille").addEventListener("click", () => envoyer("patrouille"));
-$("btn-base").addEventListener("click", () => envoyer("base"));
-$("btn-redemarrer").addEventListener("click", () => envoyer("redemarrer_navigation"));
-$("btn-veille").addEventListener("click", () => envoyer("veille"));
-
-// ===== Réglage de la marge (paramètre Nav2 modifié en direct) ================
-const PARAM_MARGE = "inflation_layer.inflation_radius";
-const formatMetres = (v) => `${Number(v).toFixed(2).replace(".", ",")} m`;
-$("curseur-marge").addEventListener("input", (e) => {
-  $("valeur-marge").textContent = formatMetres(e.target.value);
-});
-
-// Lit la valeur actuelle (service standard « get_parameters » de chaque nœud ROS 2).
-function lireMarge() {
-  new ROSLIB.Service({
-    ros, name: `${NOEUDS_COSTMAP[0]}/get_parameters`,
-    serviceType: "rcl_interfaces/srv/GetParameters",
-  }).callService({ names: [PARAM_MARGE] }, (rep) => {
-    const v = rep.values && rep.values[0] && rep.values[0].double_value;
-    if (v) { $("curseur-marge").value = v; $("valeur-marge").textContent = formatMetres(v); }
-  }, () => journal("Marge : Nav2 pas encore démarré.", true));
-}
-
-// Applique la valeur aux deux cartes de coûts (globale et locale).
-$("btn-marge").addEventListener("click", () => {
-  const v = Math.max(RAYON_ROBOT, parseFloat($("curseur-marge").value));
-  for (const noeud of NOEUDS_COSTMAP) {
-    new ROSLIB.Service({
-      ros, name: `${noeud}/set_parameters`, serviceType: "rcl_interfaces/srv/SetParameters",
-    }).callService(
-      // type 3 = nombre décimal (rcl_interfaces/msg/ParameterType.PARAMETER_DOUBLE)
-      { parameters: [{ name: PARAM_MARGE, value: { type: 3, double_value: v } }] },
-      (rep) => {
-        const r = rep.results && rep.results[0];
-        if (r && r.successful) journal(`Marge ${formatMetres(v)} appliquée (${noeud.split("/")[1]}).`);
-        else journal(`Marge refusée (${noeud}) : ${r ? r.reason : "?"}`, true);
-      },
-      (err) => journal(`Marge : échec (${err}).`, true));
-  }
-});
-
-// ===== Journal ===============================================================
-// niveau : "info", "avertissement" ou "erreur" (true = "erreur", pour les appels courts).
-function journal(texte, niveau = "info") {
-  const li = document.createElement("li");
-  const heure = document.createElement("time");
-  heure.textContent = new Date().toLocaleTimeString("fr-CA");
-  const span = document.createElement("span");
-  span.textContent = texte;
-  if (niveau === true) niveau = "erreur";
-  if (niveau !== "info") span.className = niveau;
-  li.append(heure, span);
-  $("journal").prepend(li);
-  while ($("journal").children.length > 30) $("journal").lastChild.remove();
-}
-
-afficherPoints();
-majPilotage();   // désactivé tant que l'état du robot n'est pas connu
-connecter();
-</script>
 </body>
 </html>
