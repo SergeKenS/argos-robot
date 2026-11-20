@@ -73,6 +73,9 @@ class FluxVideo:
         requete.send_response(200)
         requete.send_header('Content-Type', 'multipart/x-mixed-replace; boundary=image')
         requete.send_header('Cache-Control', 'no-cache')
+        # Autorise une page servie par un autre port (l'application, port 8080) à
+        # afficher ce flux : sans cet en-tête, Chrome le bloque (règle « ORB »).
+        requete.send_header('Access-Control-Allow-Origin', '*')
         requete.end_headers()
         vu = 0
         try:

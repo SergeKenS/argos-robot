@@ -210,6 +210,8 @@ function demarrerVideo() {
     $("en-direct").classList.add("coupe");
     relanceVideo = setTimeout(demarrerVideo, 3000);
   };
+  // Flux servi par un autre port : demande « CORS », sinon Chrome bloque le flux.
+  image.crossOrigin = "anonymous";
   // Le paramètre t évite qu'un ancien flux en cache soit réutilisé.
   image.src = `http://${location.hostname || "localhost"}:${PORT_VIDEO}/flux?t=${Date.now()}`;
   // Un flux MJPEG ne signale pas chaque image : on regarde si une image est arrivée.
