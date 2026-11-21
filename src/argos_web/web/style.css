@@ -130,7 +130,7 @@ label { cursor: pointer; }
 .etiquette[data-role=manuel] { background: var(--orange); color: var(--fond); }
 .etiquette[data-echec] { background: var(--danger); color: #FFFFFF; }
 .entete-droite { display: flex; align-items: center; gap: 14px; }
-.liaison { display: inline-flex; align-items: center; gap: 8px; font-family: var(--mono); font-size: 14px; color: var(--danger-texte); }
+.liaison { display: inline-flex; align-items: center; gap: 8px; font-family: var(--mono); font-size: 14px; white-space: nowrap; color: var(--danger-texte); }
 .liaison::before { content: ""; width: 9px; height: 9px; background: var(--direct); }
 body:not(.deconnecte) .liaison { color: var(--texte); }
 body:not(.deconnecte) .liaison::before { background: var(--ok); }
@@ -391,6 +391,8 @@ button.stop {
   .hud.menu, .jauge { display: none !important; }
   .en-direct { top: 12px; left: 14px; font-size: 12px; }
   .sans-lidar { top: 10px; right: 12px; padding: 2px 8px; font-size: 11px; letter-spacing: 1px; }
+  .sans-lidar .long { display: none; }   /* écran étroit : « SANS LIDAR » suffit */
+  .liaison { font-size: 12px; gap: 6px; }
   .regle { top: 34px; width: 66%; }
   .regle .titre-regle { display: none; }
   .inclinaison { right: 10px; height: 58%; }
@@ -405,7 +407,7 @@ button.stop {
   }
   .commandes > .hud { position: static; transform: none; }
   .commandes .actions-tete { order: 1; grid-column: 1 / -1; gap: 10px; }
-  .commandes .actions-tete button { flex: 1; min-height: 44px; }
+  .commandes .actions-tete button { flex: 1; min-height: 46px; display: inline-flex; align-items: center; justify-content: center; white-space: nowrap; }
   .commandes .croix-zone.gauche { order: 2; justify-self: center; }
   .commandes .croix-zone.droite { order: 3; justify-self: center; }
   .commandes .zone-stop { order: 4; grid-column: 1 / -1; }

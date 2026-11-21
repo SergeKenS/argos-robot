@@ -253,7 +253,7 @@ function demarrerVideo() {
       image.classList.add("visible");
       placerCadre();
       $("message-video").hidden = true;
-      $("en-direct").textContent = "EN DIRECT · CAMÉRA";
+      $("en-direct").textContent = "EN DIRECT";
       $("en-direct").classList.remove("coupe");
     }
   }, 500);
