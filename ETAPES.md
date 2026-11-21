@@ -1,12 +1,12 @@
 # Feuille de route
 
-Mise à jour le 2026-11-13. Principe : un composant, un essai, une mesure. Peu de
+Mise à jour le 2026-11-20. Principe : un composant, un essai, une mesure. Peu de
 fonctions nouvelles avant que le robot réel roule. Architecture : `ARCHITECTURE.md`.
 
 | Phase | Contenu | État |
 |---|---|---|
 | 0. Simulation | Étapes 1 à 6 plus bas : clavier, SLAM, Nav2, points, répartiteur, page web | Fait |
-| 1. Base logicielle | Répartiteur en rôles (ex-fonctionnalités), tests automatiques | Validé en simulation (2026-11-13) ; reste 2 et 3 |
+| 1. Base logicielle | Répartiteur en rôles (ex-fonctionnalités), tests automatiques, application web, rôle Manuel | Validé en simulation (2026-11-13) ; application faite (2026-11-20) ; reste 2, 3 et 4 |
 | 2. Essais par composant | Tourelle, Pi 5, LiDAR, moteurs, alimentation | Tourelle, Pi, moteurs (roues en l'air) ✔ ; LiDAR attendu |
 | 3. Robot réel | Assemblage, pilotes, refaire les étapes 1 à 6 sur le vrai robot | À venir |
 | 4. Tête | Tourelle sur le robot, nœud « regard », rôle Suivi | À venir |
@@ -23,6 +23,20 @@ fonctions nouvelles avant que le robot réel roule. Architecture : `ARCHITECTURE
    avant la phase 3. Réussi = Nav2 démarre sans Gazebo, en attente des capteurs.
 3. **Protéger la page** (mot de passe, rosbridge limité au réseau local) : avant
    tout usage hors de la maison, et avant d'ouvrir un accès au superviseur.
+4. **Rôle Manuel** (conduire le corps et la tête depuis la page, sans LiDAR).
+   - ✔ Application (2026-11-20) : `src/argos_web/web/` découpée (thème, onglets par
+     rôle, menu, panneau Manuel pour PC, téléphone couché et debout). Validée par
+     l'utilisateur sur son téléphone, avec un banc d'essai provisoire
+     (`essais/appli/`, résultats et problèmes résolus dans son README).
+   - ✔ `pont_moteurs` : vitesse maximale 0,70 m/s, rampe d'accélération (0,4 m/s²),
+     roue libre quand les ordres cessent, freinage sur ordre 0 ou sens opposé.
+   - Reste, dans l'ordre (arborescence dans `ARCHITECTURE.md`) : les organes dans le
+     répartiteur ; `roles/manuel.py` et ses tests (un test par bouton) ; les nœuds
+     `tourelle` et `camera` (la caméra ne filme que si quelqu'un regarde) ;
+     `robot.launch.py`. Le banc d'essai sert de référence, puis il est supprimé.
+   - À savoir : sous Windows, `argos-pi.local` met 11 s à répondre ; ouvrir la page
+     par l'adresse IP (http://192.168.2.78:8080). Pour la phase 3 : aligner le
+     lisseur de vitesse de Nav2 (2,5 m/s², réglage TurtleBot) sur la rampe du robot.
 
 ## Phase 2 : essais par composant (dossier `essais/`)
 
@@ -31,7 +45,7 @@ fonctions nouvelles avant que le robot réel roule. Architecture : `ARCHITECTURE
 | Tourelle (`essais/tourelle/`) | ✔ Suivi validé sur le Pi et sur batterie (essai 4) ; fixée sur le châssis, objet vert, image en direct (`--flux`) le 2026-11-14 | Suivi validé à la main, mesures dans le README ✔ |
 | Pi 5 (`essais/raspberry/`) | ✔ Ubuntu Server 24.04, SSH par clé, ROS 2 Jazzy, échange avec le PC ; ✔ répartiteur et page web compilés et démarrés sur le Pi (2026-11-20, Nav2 partiel sans RViz) | `ros2 topic list` du Pi vu depuis le PC ✔ |
 | LiDAR C1 | Attendu (pas encore reçu). Sur le Pi, avec `rplidar_ros` | `/scan` affiché dans RViz sur le PC |
-| Moteurs et encodeurs (`essais/moteurs/`) | Roues en l'air ✔ (protocole, vitesse à 3 %, nœud `pont_moteurs`, entraxe, rodage) ; au sol : marche avant ✔, rotation sur place ✔ (problème 7 : les roues partaient 0,25 à 0,9 s après l'ordre, essais trop courts ; régulateur de la carte réglé, départ en 0,1 s ; tour complet juste à 2 à 3 %) | Robot sur cales : `cmd_vel` obéi ✔, `/odom` juste à 5 % sur 1 m (au sol) |
+| Moteurs et encodeurs (`essais/moteurs/`) | Roues en l'air ✔ (protocole, vitesse à 3 %, nœud `pont_moteurs`, entraxe, rodage) ; au sol : marche avant ✔, rotation sur place ✔ (problème 7 : les roues partaient 0,25 à 0,9 s après l'ordre, essais trop courts ; régulateur de la carte réglé, départ en 0,1 s ; tour complet juste à 2 à 3 %) ; rampe, roue libre et freinage ✔ (2026-11-20, `essais/appli/`) | Robot sur cales : `cmd_vel` obéi ✔, `/odom` juste à 5 % sur 1 m (au sol) |
 | Tête et corps (`essais/suivi_corps/`) | Liaison roues ✔, compensation ✔ (objet à 14 px du centre en médiane, corps à 60 °/s), suivi en rotation ✔ (objet à 50-100 °/s : 34 px, tourelle jamais en butée), rejoindre et suivre à 40 cm ✔ (0,50 m/s en avant et en arrière), recherche de l'objet perdu ✔ premier essai (retrouvé en 11,5 s) ; reste : répéter la recherche 10 fois | Le robot cherche, suit et rejoint l'objet vert, de façon fluide |
 | Alimentation (`essais/alimentation/`) | Pi sur batterie ✔, tourelle ✔, moteurs 20 min à fond ✔ (Pi jamais sous 5,016 V) ; reste : LiDAR, câblage définitif (fusible, interrupteur, Wago), arrêt d'urgence, autonomie | Pi + LiDAR + moteurs sans redémarrage du Pi ; l'arrêt d'urgence coupe les moteurs |
 

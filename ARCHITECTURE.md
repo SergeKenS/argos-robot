@@ -51,14 +51,14 @@ seule (`python3 -m pytest src/argos_base/test/`). Mesures et réglages :
 
 ## Arborescence cible (décidée le 2026-11-20)
 
-✔ = existe, ★ = à créer pour le rôle Manuel, ○ = plus tard. Chaque fichier est
+✔ = existe, ★ = à créer pour le rôle Manuel, ○ = plus tard. Mise à jour le 2026-11-20. Chaque fichier est
 créé à sa place, au moment où on l'écrit : pas de fichier vide en attente.
 
 ```
 src/
 ├── argos_base/              pilotes du vrai robot : tout ce qui parle au matériel
 │   ├── argos_base/
-│   │   ├── pont_moteurs.py      ✔ nœud : roues
+│   │   ├── pont_moteurs.py      ✔ nœud : roues (rampe, roue libre, freinage)
 │   │   ├── carte_yahboom.py     ✔ protocole de la carte moteurs, sans ROS
 │   │   ├── cinematique.py       ✔ calculs, sans ROS
 │   │   ├── tourelle.py          ★ nœud : tête
@@ -82,11 +82,12 @@ src/
 │
 └── argos_web/               l'application (téléphone, tablette, PC)
     └── web/                 servi tel quel, sans étape de compilation
-        ├── index.html           squelette de la page
-        ├── style.css            ★ apparence
-        ├── app.js               ★ connexion au robot, état, choix du panneau
-        ├── panneaux/            ★ un fichier par rôle : service.js, cartographie.js, manuel.js
-        └── outils/joystick.js   ★
+        ├── index.html           ✔ squelette de la page
+        ├── style.css            ✔ apparence (thème jeu vidéo, PC, téléphone)
+        ├── app.js               ✔ connexion au robot, état, onglets, menu, journal
+        ├── panneaux/            ✔ un fichier par rôle : service.js, cartographie.js, manuel.js
+        ├── outils/              ✔ carte.js, croix.js (boutons et clavier), joystick.js
+        └── polices/             ✔ copies locales (la page marche sans Internet)
 
 firmware/tourelle/           ★ programme de l'ESP32 (repris de essais/tourelle/)
 ```
