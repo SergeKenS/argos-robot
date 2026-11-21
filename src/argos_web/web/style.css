@@ -232,8 +232,12 @@ details.bloc[open] > summary::after { content: "−"; }
   background: #0E151B; border: 1px solid var(--bord-doux); overflow: hidden;
   touch-action: none; user-select: none; -webkit-user-select: none;
 }
-.vue-camera > img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: contain; opacity: 0; }
-.vue-camera > img.visible { opacity: 1; }
+/* L'écran couvre tout le cadre ; les commandes sont posées par-dessus. */
+.vue-camera > .ecran { position: absolute; inset: 0; }
+.ecran > img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: contain; opacity: 0; }
+.ecran > img.visible { opacity: 1; }
+.commandes { position: absolute; inset: 0; z-index: 4; pointer-events: none; }
+#btn-menu-entete { display: none; }
 .hud { position: absolute; z-index: 3; pointer-events: none; }
 .hud button, .actif-souris { pointer-events: auto; }
 .hud-texte { font-family: var(--mono); font-size: 14px; color: var(--texte-2); text-shadow: 0 0 4px #000; }
@@ -370,24 +374,45 @@ button.stop {
 
 /* ===== Téléphone debout ======================================================== */
 @media (max-width: 600px) {
+  /* En-tête compact : les onglets et Veille passent dans le menu ☰. */
   .logo { font-size: 22px; letter-spacing: 4px; }
-  .entete { padding: 10px 12px 6px; }
-  .onglets { padding: 4px 12px 8px; }
+  .entete { padding: 8px 12px; flex-wrap: nowrap; }
+  .marque { gap: 10px; }
+  .entete-droite { gap: 10px; }
+  .onglets, #btn-veille { display: none; }
+  #btn-menu-entete { display: inline-flex; }
   main { padding: 0 12px 16px; }
   .zone-carte { height: 52vh; min-height: 260px; }
-  .vue-camera { height: 70vh; min-height: 420px; }
-  .jauge { display: none; }
-  .inclinaison .grand { font-size: 18px; }
-  .regle { width: 70%; }
+
+  /* Manuel : l'image en haut, en entier ; les commandes en dessous. */
+  .vue-camera { height: auto; min-height: 0; display: flex; flex-direction: column; }
+  .vue-camera > .ecran { position: relative; inset: auto; width: 100%; aspect-ratio: 4 / 3; }
+  .visee > .coin { width: 18px; height: 18px; }
+  .hud.menu, .jauge { display: none !important; }
+  .en-direct { top: 12px; left: 14px; font-size: 12px; }
+  .sans-lidar { top: 10px; right: 12px; padding: 2px 8px; font-size: 11px; letter-spacing: 1px; }
+  .regle { top: 34px; width: 66%; }
   .regle .titre-regle { display: none; }
-  .sans-lidar { top: 110px; right: 50%; transform: translateX(50%); font-size: 12px; white-space: nowrap; }
-  /* Pas assez de largeur pour STOP entre les deux joysticks : il passe au-dessus. */
-  .zone-stop { bottom: 170px; }
-  .joystick { width: 120px; height: 120px; }
-  .joystick .manette { left: 34px; top: 34px; }
-  .croix-zone.gauche { left: 12px; }
-  .croix-zone.droite { right: 12px; }
-  button.stop { min-width: 120px; font-size: 20px; }
+  .inclinaison { right: 10px; height: 58%; }
+  .inclinaison .nom { display: none; }
+  .inclinaison .grand { font-size: 16px; }
+  .reticule { width: 80px; height: 80px; }
+
+  .commandes {
+    position: static; pointer-events: auto;
+    display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px 10px;
+    padding: 14px 10px 18px; border-top: 1px solid var(--bord-doux);
+  }
+  .commandes > .hud { position: static; transform: none; }
+  .commandes .actions-tete { order: 1; grid-column: 1 / -1; gap: 10px; }
+  .commandes .actions-tete button { flex: 1; min-height: 44px; }
+  .commandes .croix-zone.gauche { order: 2; justify-self: center; }
+  .commandes .croix-zone.droite { order: 3; justify-self: center; }
+  .commandes .zone-stop { order: 4; grid-column: 1 / -1; }
+  .commandes .zone-stop .vitesse { text-shadow: none; }
+  button.stop { min-width: 220px; min-height: 58px; font-size: 22px; }
+  .joystick { width: 140px; height: 140px; }
+  .joystick .manette { left: 44px; top: 44px; }
 }
 
 /* ===== Menu qui glisse depuis la gauche ======================================== */

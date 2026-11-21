@@ -309,6 +309,7 @@ function demarrer() {
   $("btn-veille-tiroir").addEventListener("click", () => { robot.envoyer("veille"); fermerMenu(); });
   // Menu : ouvert par le bouton ☰ (panneau Manuel), fermé par la croix, à côté, ou Échap.
   document.addEventListener("ouvrir-menu", ouvrirMenu);
+  $("btn-menu-entete").addEventListener("click", ouvrirMenu);
   $("btn-fermer-tiroir").addEventListener("click", fermerMenu);
   $("fond-tiroir").addEventListener("click", fermerMenu);
   document.addEventListener("keydown", (e) => { if (e.key === "Escape") fermerMenu(); });

@@ -71,7 +71,7 @@ function initialiser(r) {
   robot.ecouter("etat", () => { if (!commandesPermises()) stop(); majVoile(); });
   robot.ecouter("vitesse", afficherVitesse);
   // Le cadre des règles suit l'image quand la fenêtre change de taille (ou de sens).
-  new ResizeObserver(placerCadre).observe($("vue-camera"));
+  new ResizeObserver(placerCadre).observe($("ecran"));
 
   // ----- Clavier -----
   document.addEventListener("keydown", (e) => {
@@ -204,7 +204,7 @@ function afficherVitesse({ avance, rotation }) {
 // proportions (4:3 pour 640 x 480) : sur un écran plus large, des bandes noires
 // apparaissent à gauche et à droite, et les règles ne doivent pas y tomber.
 function placerCadre() {
-  const vue = $("vue-camera"), image = $("video"), cadre = $("cadre-image");
+  const vue = $("ecran"), image = $("video"), cadre = $("cadre-image");
   const proportion = image.naturalWidth > 0 ? image.naturalWidth / image.naturalHeight : 4 / 3;
   const l = vue.clientWidth, h = vue.clientHeight;
   const largeur = Math.min(l, h * proportion), hauteur = largeur / proportion;

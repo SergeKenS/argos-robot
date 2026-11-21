@@ -23,6 +23,9 @@
     <span id="liaison" class="liaison">HORS LIGNE</span>
     <button id="btn-veille" class="contour-danger commande" type="button"
             title="Arrête la tâche en cours ; le robot passe au repos">Veille</button>
+    <button id="btn-menu-entete" class="icone discret" type="button" aria-label="Afficher le menu">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><line x1="4" y1="7" x2="20" y2="7"/><line x1="4" y1="12" x2="20" y2="12"/><line x1="4" y1="17" x2="20" y2="17"/></svg>
+    </button>
   </div>
 </header>
 
@@ -160,89 +163,97 @@
 <!-- ===== Panneau MANUEL : conduire le corps et la tête ===================== -->
 <section class="panneau" data-panneau="manuel" hidden>
   <div class="principal">
-    <div class="vue-camera visee" id="vue-camera">
-      <span class="coin hg"></span><span class="coin hd"></span><span class="coin bg"></span><span class="coin bd"></span>
-      <img id="video" alt="Image de la caméra du robot">
-      <div class="message-centre" id="message-video">IMAGE DE LA CAMÉRA</div>
+    <div class="vue-camera" id="vue-camera">
+      <!-- Écran : l'image et ce qui se lit dessus (règles, réticule, état). -->
+      <div class="ecran visee" id="ecran">
+        <span class="coin hg"></span><span class="coin hd"></span><span class="coin bg"></span><span class="coin bd"></span>
+        <img id="video" alt="Image de la caméra du robot">
+        <div class="message-centre" id="message-video">IMAGE DE LA CAMÉRA</div>
 
-      <button class="hud menu icone actif-souris" id="btn-menu" type="button" aria-label="Afficher le menu">
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><line x1="4" y1="7" x2="20" y2="7"/><line x1="4" y1="12" x2="20" y2="12"/><line x1="4" y1="17" x2="20" y2="17"/></svg>
-      </button>
-      <div class="hud actions-tete seulement-tactile">
-        <button class="principal petit commande" id="btn-recentrer-hud" type="button" aria-label="Recentrer la tête">Recentrer</button>
-        <button class="orange petit commande" id="btn-aligner-hud" type="button" aria-label="Aligner le corps sur la tête">Aligner</button>
-      </div>
-      <div class="hud hud-texte en-direct coupe" id="en-direct">SANS IMAGE</div>
-      <div class="hud sans-lidar">SANS LIDAR · CONDUITE À VUE</div>
+        <button class="hud menu icone actif-souris" id="btn-menu" type="button" aria-label="Afficher le menu">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><line x1="4" y1="7" x2="20" y2="7"/><line x1="4" y1="12" x2="20" y2="12"/><line x1="4" y1="17" x2="20" y2="17"/></svg>
+        </button>
+        <div class="hud hud-texte en-direct coupe" id="en-direct">SANS IMAGE</div>
+        <div class="hud sans-lidar">SANS LIDAR · CONDUITE À VUE</div>
 
-      <!-- Cadre posé exactement sur l'image affichée (calculé par manuel.js) :
-           les deux règles de la tête restent sur l'image, pas dans les bandes noires. -->
-      <div class="cadre-image" id="cadre-image">
-        <div class="regle" role="img" aria-label="Orientation de la tête par rapport au corps" id="regle">
-          <span class="titre-regle">TÊTE PAR RAPPORT AU CORPS</span>
-          <div class="graduations" id="graduations"></div>
-          <div class="curseur-zone">
-            <div class="curseur" id="curseur-tete">
-              <svg width="12" height="8" viewBox="0 0 12 8" aria-hidden="true"><polygon points="6 0 12 8 0 8" fill="currentColor"/></svg>
-              <span id="texte-tete">--</span>
+        <!-- Cadre posé exactement sur l'image affichée (calculé par manuel.js) :
+             les deux règles de la tête restent sur l'image, pas dans les bandes noires. -->
+        <div class="cadre-image" id="cadre-image">
+          <div class="regle" role="img" aria-label="Orientation de la tête par rapport au corps" id="regle">
+            <span class="titre-regle">TÊTE PAR RAPPORT AU CORPS</span>
+            <div class="graduations" id="graduations"></div>
+            <div class="curseur-zone">
+              <div class="curseur" id="curseur-tete">
+                <svg width="12" height="8" viewBox="0 0 12 8" aria-hidden="true"><polygon points="6 0 12 8 0 8" fill="currentColor"/></svg>
+                <span id="texte-tete">--</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="inclinaison" role="img" aria-label="Inclinaison de la tête par rapport au corps">
+            <div class="chiffres"><span class="nom">HAUT / BAS</span><span class="grand" id="texte-inclinaison">--</span></div>
+            <div class="echelle" id="graduations-verticales">
+              <svg class="repere" id="repere-inclinaison" width="10" height="12" viewBox="0 0 10 12" aria-hidden="true"><polygon points="10 6 0 0 0 12" fill="#7FD4C8"/></svg>
             </div>
           </div>
         </div>
 
-        <div class="inclinaison" role="img" aria-label="Inclinaison de la tête par rapport au corps">
-          <div class="chiffres"><span class="nom">HAUT / BAS</span><span class="grand" id="texte-inclinaison">--</span></div>
-          <div class="echelle" id="graduations-verticales">
-            <svg class="repere" id="repere-inclinaison" width="10" height="12" viewBox="0 0 10 12" aria-hidden="true"><polygon points="10 6 0 0 0 12" fill="#7FD4C8"/></svg>
+        <svg class="hud reticule" width="110" height="110" viewBox="0 0 120 120" fill="none" stroke="#7FD4C8" stroke-width="2" aria-hidden="true">
+          <line x1="60" y1="20" x2="60" y2="46"/><line x1="60" y1="74" x2="60" y2="100"/>
+          <line x1="20" y1="60" x2="46" y2="60"/><line x1="74" y1="60" x2="100" y2="60"/>
+          <circle cx="60" cy="60" r="2" fill="#7FD4C8"/>
+          <path d="M30 40 V30 H40 M80 30 H90 V40 M90 80 V90 H80 M40 90 H30 V80" stroke-width="1.5"/>
+        </svg>
+
+        <div class="hud jauge" role="img" aria-label="Vitesse d'avance du robot">
+          <div class="tube"><div class="niveau" id="niveau-vitesse"></div></div>
+          <div class="chiffres"><span class="nom">AVANCE</span><span class="grand" id="jauge-vitesse">--</span><span class="unite">m/s</span></div>
+        </div>
+      </div>
+
+      <!-- Commandes : posées sur l'image sur PC et téléphone couché ; rangées sous
+           l'image sur téléphone debout, pour ne rien cacher de ce qu'il y a devant. -->
+      <div class="commandes">
+        <div class="hud actions-tete seulement-tactile">
+          <button class="principal petit commande" id="btn-recentrer-hud" type="button" aria-label="Recentrer la tête">Recentrer</button>
+          <button class="orange petit commande" id="btn-aligner-hud" type="button" aria-label="Aligner le corps sur la tête">Aligner</button>
+        </div>
+
+        <!-- Souris et clavier : deux croix de boutons -->
+        <div class="hud croix-zone gauche seulement-souris">
+          <span class="nom">CORPS</span>
+          <div class="croix orange actif-souris" id="croix-corps">
+            <button type="button" data-sens="haut" aria-label="Avancer (touche W)">W</button>
+            <button type="button" data-sens="gauche" aria-label="Tourner à gauche (touche A)">A</button>
+            <button type="button" data-sens="bas" aria-label="Reculer (touche S)">S</button>
+            <button type="button" data-sens="droite" aria-label="Tourner à droite (touche D)">D</button>
           </div>
         </div>
-      </div>
-
-      <svg class="hud reticule" width="110" height="110" viewBox="0 0 120 120" fill="none" stroke="#7FD4C8" stroke-width="2" aria-hidden="true">
-        <line x1="60" y1="20" x2="60" y2="46"/><line x1="60" y1="74" x2="60" y2="100"/>
-        <line x1="20" y1="60" x2="46" y2="60"/><line x1="74" y1="60" x2="100" y2="60"/>
-        <circle cx="60" cy="60" r="2" fill="#7FD4C8"/>
-        <path d="M30 40 V30 H40 M80 30 H90 V40 M90 80 V90 H80 M40 90 H30 V80" stroke-width="1.5"/>
-      </svg>
-
-      <div class="hud jauge" role="img" aria-label="Vitesse d'avance du robot">
-        <div class="tube"><div class="niveau" id="niveau-vitesse"></div></div>
-        <div class="chiffres"><span class="nom">AVANCE</span><span class="grand" id="jauge-vitesse">--</span><span class="unite">m/s</span></div>
-      </div>
-
-      <!-- Souris et clavier : deux croix de boutons -->
-      <div class="hud croix-zone gauche seulement-souris">
-        <span class="nom">CORPS</span>
-        <div class="croix orange actif-souris" id="croix-corps">
-          <button type="button" data-sens="haut" aria-label="Avancer (touche W)">W</button>
-          <button type="button" data-sens="gauche" aria-label="Tourner à gauche (touche A)">A</button>
-          <button type="button" data-sens="bas" aria-label="Reculer (touche S)">S</button>
-          <button type="button" data-sens="droite" aria-label="Tourner à droite (touche D)">D</button>
+        <div class="hud croix-zone droite seulement-souris">
+          <span class="nom">TÊTE</span>
+          <div class="croix tete actif-souris" id="croix-tete">
+            <button type="button" data-sens="haut" aria-label="Regarder en haut (touche I)">I</button>
+            <button type="button" data-sens="gauche" aria-label="Regarder à gauche (touche J)">J</button>
+            <button type="button" data-sens="bas" aria-label="Regarder en bas (touche K)">K</button>
+            <button type="button" data-sens="droite" aria-label="Regarder à droite (touche L)">L</button>
+          </div>
         </div>
-      </div>
-      <div class="hud croix-zone droite seulement-souris">
-        <span class="nom">TÊTE</span>
-        <div class="croix tete actif-souris" id="croix-tete">
-          <button type="button" data-sens="haut" aria-label="Regarder en haut (touche I)">I</button>
-          <button type="button" data-sens="gauche" aria-label="Regarder à gauche (touche J)">J</button>
-          <button type="button" data-sens="bas" aria-label="Regarder en bas (touche K)">K</button>
-          <button type="button" data-sens="droite" aria-label="Regarder à droite (touche L)">L</button>
+
+        <!-- Écran tactile : deux joysticks -->
+        <div class="hud croix-zone gauche seulement-tactile">
+          <div class="joystick orange actif-souris" id="joystick-corps" role="application" aria-label="Joystick du corps"><div class="manette"></div></div>
+          <span class="nom">CORPS</span>
         </div>
-      </div>
+        <div class="hud croix-zone droite seulement-tactile">
+          <div class="joystick tete actif-souris" id="joystick-tete" role="application" aria-label="Joystick de la tête"><div class="manette"></div></div>
+          <span class="nom">TÊTE</span>
+        </div>
 
-      <!-- Écran tactile : deux joysticks -->
-      <div class="hud croix-zone gauche seulement-tactile">
-        <div class="joystick orange actif-souris" id="joystick-corps" role="application" aria-label="Joystick du corps"><div class="manette"></div></div>
-        <span class="nom">CORPS</span>
-      </div>
-      <div class="hud croix-zone droite seulement-tactile">
-        <div class="joystick tete actif-souris" id="joystick-tete" role="application" aria-label="Joystick de la tête"><div class="manette"></div></div>
-        <span class="nom">TÊTE</span>
-      </div>
-
-      <div class="hud zone-stop">
-        <span class="vitesse" id="vitesse-stop">-- m/s · -- °/s</span>
-        <button class="stop actif-souris" id="btn-stop" type="button" aria-label="Arrêt immédiat (barre d'espace)">STOP</button>
-        <span class="hud-texte seulement-souris">[ ESPACE ]</span>
+        <div class="hud zone-stop">
+          <span class="vitesse" id="vitesse-stop">-- m/s · -- °/s</span>
+          <button class="stop actif-souris" id="btn-stop" type="button" aria-label="Arrêt immédiat (barre d'espace)">STOP</button>
+          <span class="hud-texte seulement-souris">[ ESPACE ]</span>
+        </div>
       </div>
 
       <div class="voile" id="voile-manuel">
