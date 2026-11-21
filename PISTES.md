@@ -58,3 +58,23 @@ Deux choix à faire le moment venu :
 
 Ce qui augmente la difficulté : un modèle d'IA peut mal comprendre. D'où la liste
 fermée de commandes, l'affichage de ce qui est compris et la confirmation.
+
+## Veille basse consommation
+
+Décidé le 2026-11-20 : à faire avec le robot complet, en cas d'usage réels.
+L'autonomie se joue surtout quand le robot attend. Aujourd'hui, « VEILLE » veut
+dire « au repos mais prêt » : caméra, processeur et navigation restent actifs.
+
+Ce qu'une vraie veille couperait : caméra, moteur du LiDAR, servos de la tête
+(après retour au centre), serveurs de Nav2 (en pause), fréquence du processeur.
+Restent allumés : Wi-Fi et liaison avec la page, pour réveiller le robot.
+
+Avant de l'écrire :
+1. Nommer l'état « au repos mais prêt » (REPOS ? ATTENTE ?) si VEILLE devient la
+   basse consommation.
+2. Mesurer la consommation de chaque composant, allumé puis éteint
+   (`essais/alimentation/`), pour savoir ce qui vaut la peine d'être coupé.
+3. Fixer le temps de réveil acceptable (un appel depuis une chambre).
+
+Déjà retenu, sans attendre : le nœud caméra ne filme que si quelqu'un regarde ou
+si un rôle en a besoin.
