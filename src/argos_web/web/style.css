@@ -265,7 +265,7 @@ details.bloc[open] > summary::after { content: "−"; }
 
 /* Recentrer et Aligner sur l'image (écrans tactiles) */
 .actions-tete { top: 14px; right: 14px; gap: 8px; }
-.actions-tete button { background-color: rgba(10, 14, 18, .6); }
+.actions-tete button { background-color: rgba(10, 14, 18, .6); display: inline-flex; align-items: center; justify-content: center; white-space: nowrap; }
 
 /* Réticule au centre */
 .reticule { left: 50%; top: 50%; transform: translate(-50%, -50%); }
