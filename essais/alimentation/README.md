@@ -105,3 +105,21 @@ depuis la batterie du robot, avant de tout assembler.
      baisser : à surveiller aux prochains essais.
    - Pour le robot : interrupteur général dans le câblage définitif. En attendant,
      débrancher la batterie à la fin de chaque séance.
+
+3. **Batterie de nouveau vidée jusqu'à 6,7 V** (2026-11-20).
+   - Symptôme : 6,7 V au multimètre (environ 2,2 V par élément) après une séance de
+     plus de 3 h (Pi, caméra en continu, tourelle, moteurs : essais de l'application,
+     `essais/appli/`). Vers la fin, le Pi ne répondait plus, ni par son nom ni par
+     son adresse IP.
+   - Cause probable : la batterie s'est vidée en usage. Mais la protection, annoncée
+     à 8,1 V, ne l'a pas arrêtée là : soit elle coupe plus bas qu'annoncé, soit le
+     convertisseur 5 V continue de tirer après. **On ne peut pas compter sur la
+     protection de la batterie.** Deuxième décharge profonde : capacité peut-être
+     réduite.
+   - Solution immédiate : batterie débranchée, recharge sous surveillance avec le
+     chargeur Yahboom, sur une surface qui ne brûle pas. Ne plus l'utiliser si elle
+     chauffe, gonfle, sent, ou ne remonte pas vers 12,6 V.
+   - Pour le robot : mesurer nous-mêmes la tension (et le courant) de la batterie,
+     alerter sur la page vers 10,5 V, arrêter proprement avant 9 V. Matériel à
+     choisir avec le montage (voir ETAPES.md, alimentation). Interrupteur général
+     dans le câblage définitif.
