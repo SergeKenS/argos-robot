@@ -1,13 +1,13 @@
 # Feuille de route
 
-Mise à jour le 2026-11-20. Principe : un composant, un essai, une mesure. Peu de
+Mise à jour le 2026-11-28. Principe : un composant, un essai, une mesure. Peu de
 fonctions nouvelles avant que le robot réel roule. Architecture : `ARCHITECTURE.md`.
 
 | Phase | Contenu | État |
 |---|---|---|
 | 0. Simulation | Étapes 1 à 6 plus bas : clavier, SLAM, Nav2, points, répartiteur, page web | Fait |
 | 1. Base logicielle | Répartiteur en rôles (ex-fonctionnalités), tests automatiques, application web, rôle Manuel | Validé en simulation (2026-11-13) ; application faite (2026-11-20) ; reste 2, 3 et 4 |
-| 2. Essais par composant | Tourelle, Pi 5, LiDAR, moteurs, alimentation | Tourelle, Pi, moteurs (roues en l'air) ✔ ; LiDAR attendu |
+| 2. Essais par composant | Tourelle, Pi 5, LiDAR, moteurs, alimentation | Tourelle, Pi, moteurs ✔ ; LiDAR seul ✔ (2026-11-28) ; reste : montage définitif, puis cartographie |
 | 3. Robot réel | Assemblage, pilotes, refaire les étapes 1 à 6 sur le vrai robot | À venir |
 | 4. Tête | Tourelle sur le robot, nœud « regard », rôle Suivi | À venir |
 | 5. Supervision | Claude comme superviseur, rôle Observation | À venir |
@@ -44,7 +44,7 @@ fonctions nouvelles avant que le robot réel roule. Architecture : `ARCHITECTURE
 |---|---|---|
 | Tourelle (`essais/tourelle/`) | ✔ Suivi validé sur le Pi et sur batterie (essai 4) ; fixée sur le châssis, objet vert, image en direct (`--flux`) le 2026-11-14 | Suivi validé à la main, mesures dans le README ✔ |
 | Pi 5 (`essais/raspberry/`) | ✔ Ubuntu Server 24.04, SSH par clé, ROS 2 Jazzy, échange avec le PC ; ✔ répartiteur et page web compilés et démarrés sur le Pi (2026-11-20, Nav2 partiel sans RViz) | `ros2 topic list` du Pi vu depuis le PC ✔ |
-| LiDAR C1 | Attendu (pas encore reçu). Sur le Pi, avec `rplidar_ros` | `/scan` affiché dans RViz sur le PC |
+| LiDAR C1 (`essais/lidar/`) | ✔ Seul sur table (2026-11-28) : pilote officiel `sllidar_ros2` (celui d'apt ne gère pas le C1), 10 tours/s, 1 m vu à 2,6 cm près, flèche = 180° ; reste : fixation sur le robot, essai de cartographie, alimentation avec le reste | `/scan` affiché dans RViz sur le PC ✔ |
 | Moteurs et encodeurs (`essais/moteurs/`) | Roues en l'air ✔ (protocole, vitesse à 3 %, nœud `pont_moteurs`, entraxe, rodage) ; au sol : marche avant ✔, rotation sur place ✔ (problème 7 : les roues partaient 0,25 à 0,9 s après l'ordre, essais trop courts ; régulateur de la carte réglé, départ en 0,1 s ; tour complet juste à 2 à 3 %) ; rampe, roue libre et freinage ✔ (2026-11-20, `essais/appli/`) | Robot sur cales : `cmd_vel` obéi ✔, `/odom` juste à 5 % sur 1 m (au sol) |
 | Tête et corps (`essais/suivi_corps/`) | Liaison roues ✔, compensation ✔ (objet à 14 px du centre en médiane, corps à 60 °/s), suivi en rotation ✔ (objet à 50-100 °/s : 34 px, tourelle jamais en butée), rejoindre et suivre à 40 cm ✔ (0,50 m/s en avant et en arrière), recherche de l'objet perdu ✔ premier essai (retrouvé en 11,5 s) ; reste : répéter la recherche 10 fois | Le robot cherche, suit et rejoint l'objet vert, de façon fluide |
 | Alimentation (`essais/alimentation/`) | Pi sur batterie ✔, tourelle ✔, moteurs 20 min à fond ✔ (Pi jamais sous 5,016 V) ; reste : LiDAR, câblage définitif (fusible, interrupteur, Wago), arrêt d'urgence, autonomie | Pi + LiDAR + moteurs sans redémarrage du Pi ; l'arrêt d'urgence coupe les moteurs |
